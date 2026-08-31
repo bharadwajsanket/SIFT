@@ -1,0 +1,14 @@
+use_default_settings: true
+
+general:
+  instance_name: "SIFT"
+
+server:
+  secret_key: "change_this_secret_key_in_production"
+  limiter: false
+  public_instance: false
+
+search:
+  formats:
+    - html
+    - json
