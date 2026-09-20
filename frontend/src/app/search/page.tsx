@@ -30,6 +30,7 @@ import { FilterBar } from '@/components/FilterBar';
 import { SettingsPanel } from '@/components/SettingsPanel';
 import { LocationPrompt } from '@/components/LocationPrompt';
 import { ImageLightbox } from '@/components/ImageLightbox';
+import { AIOverview } from '@/components/AIOverview';
 import styles from './search.module.css';
 
 const CATEGORIES = [
@@ -485,6 +486,8 @@ function SearchController() {
 
       <main className={`${styles.mainLayout} ${!selectedResult || category === 'images' ? styles.singleColumnLayout : ''}`}>
         <section className={styles.resultsArea}>
+          <AIOverview query={query} category={category} />
+
           {!loading && !error && results.length > 0 && (
             <div className={styles.metricsRow}>
               <span>{resultCount} results</span>

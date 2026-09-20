@@ -23,6 +23,10 @@ dist/
 searxng/core-data/
 searxng/valkey-data/
 
+# Local LLM Models (GGUF binaries)
+models/*.gguf
+*.gguf
+
 # Logs
 *.log
 npm-debug.log*

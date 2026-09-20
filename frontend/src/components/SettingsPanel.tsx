@@ -19,6 +19,7 @@ import {
   MotionMode
 } from '@/lib/appearance';
 import { useAppearance } from '@/context/AppearanceContext';
+import { useAI } from '@/context/AIContext';
 import { MAP_PROVIDERS, DEFAULT_MAP_PROVIDER_ID } from '@/lib/mapProviders';
 import styles from '@/app/page.module.css';
 
@@ -92,6 +93,15 @@ export function SettingsPanel({ isOpen, onClose }: SettingsPanelProps) {
     activeAccent
   } = useAppearance();
 
+  // Local AI Overview from Context
+  const { 
+    aiEnabled, 
+    setAiEnabled, 
+    aiStatus, 
+    aiModelName, 
+    checkStatus 
+  } = useAI();
+
   // Non-appearance operational settings
   const [safeSearch, setSafeSearch] = useState<string>('1');
   const [language, setLanguage] = useState<string>('all');
@@ -107,6 +117,9 @@ export function SettingsPanel({ isOpen, onClose }: SettingsPanelProps) {
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
+      if (isOpen) {
+        checkStatus();
+      }
       const storedSafeSearch = localStorage.getItem('sift-safesearch') || '1';
       const storedLanguage = localStorage.getItem('sift-language') || 'all';
       const storedAutocomplete = localStorage.getItem('sift-autocomplete') !== 'false';
@@ -127,7 +140,7 @@ export function SettingsPanel({ isOpen, onClose }: SettingsPanelProps) {
       setLocationMode(storedLocationMode);
       setUrlInput(config.wallpaperCustomUrl || '');
     }
-  }, [isOpen, config.wallpaperCustomUrl]);
+  }, [isOpen, config.wallpaperCustomUrl, checkStatus]);
 
   const applySafeSearch = (val: string) => {
     setSafeSearch(val);
@@ -750,6 +763,78 @@ export function SettingsPanel({ isOpen, onClose }: SettingsPanelProps) {
 
           {activeTab === 'general' && (
             <div className={styles.settingsSection}>
+              
+              {/* Local AI Overview Controls */}
+              <div className={styles.settingItem}>
+                <div className={styles.sectionHeaderRow}>
+                  <label className={styles.settingLabel}>AI Overview</label>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
+                    <span
+                      style={{
+                        width: '7px',
+                        height: '7px',
+                        borderRadius: '50%',
+                        backgroundColor: aiStatus === 'local' ? 'var(--success)' : aiStatus === 'offline' ? 'var(--error)' : 'var(--text-dim)',
+                        boxShadow: aiStatus === 'local' ? '0 0 6px var(--success)' : 'none',
+                        display: 'inline-block',
+                      }}
+                      aria-hidden="true"
+                    />
+                    <span className={styles.localBadge}>
+                      {aiStatus === 'local' ? 'Local' : aiStatus === 'disabled' ? 'Disabled' : 'Offline'}
+                    </span>
+                  </div>
+                </div>
+                <span className={styles.settingDesc}>
+                  Deliver concise standalone answers directly above search results using your local GGUF model.
+                </span>
+
+                <div className={styles.segmentGroup} style={{ marginTop: '0.35rem' }}>
+                  <button
+                    type="button"
+                    role="switch"
+                    aria-checked={aiEnabled}
+                    aria-label="Enable AI Overview"
+                    className={`${styles.segmentBtn} ${aiEnabled ? styles.segmentBtnActive : ''}`}
+                    onClick={() => setAiEnabled(true)}
+                  >
+                    ON
+                  </button>
+                  <button
+                    type="button"
+                    role="switch"
+                    aria-checked={!aiEnabled}
+                    aria-label="Disable AI Overview"
+                    className={`${styles.segmentBtn} ${!aiEnabled ? styles.segmentBtnActive : ''}`}
+                    onClick={() => setAiEnabled(false)}
+                  >
+                    OFF
+                  </button>
+                </div>
+              </div>
+
+              <div className={styles.settingItem}>
+                <label className={styles.settingLabel}>AI Model</label>
+                <div style={{
+                  padding: '0.65rem 0.85rem',
+                  backgroundColor: 'var(--glass-surface)',
+                  border: '1px solid var(--glass-border)',
+                  borderRadius: 'var(--radius-sm)',
+                  fontSize: '0.85rem',
+                  fontFamily: 'var(--font-mono)',
+                  color: 'var(--text)',
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center'
+                }}>
+                  <span>{aiModelName}</span>
+                  <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>GGUF / llama.cpp</span>
+                </div>
+                <span className={styles.settingDesc}>
+                  Configured local LLM model for CPU inference. Private LAN only, zero cloud telemetry.
+                </span>
+              </div>
+
               <div className={styles.settingItem}>
                 <label htmlFor="setting-language" className={styles.settingLabel}>
                   Default Search Language

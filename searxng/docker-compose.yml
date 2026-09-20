@@ -11,8 +11,27 @@ services:
       - "${SIFT_PORT:-3000}:3000"
     environment:
       - SEARXNG_URL=http://searxng-core:8080
+      - SIFT_LLM_ENABLED=${SIFT_LLM_ENABLED:-true}
+      - SIFT_LLM_URL=${SIFT_LLM_URL:-http://llama-server:8080}
+      - SIFT_LLM_MODEL=${SIFT_LLM_MODEL:-/models/Qwen3-4B-Instruct-2507-Q4_K_M.gguf}
     depends_on:
       - core
+
+  llama-server:
+    container_name: sift-llama-server
+    image: ghcr.io/ggml-org/llama.cpp:server
+    restart: unless-stopped
+    volumes:
+      - ../models:/models:ro
+    command: >
+      -m ${SIFT_LLM_MODEL:-/models/Qwen3-4B-Instruct-2507-Q4_K_M.gguf}
+      --host 0.0.0.0
+      --port 8080
+      -t ${SIFT_LLM_THREADS:-4}
+      -c ${SIFT_LLM_CTX_SIZE:-2048}
+      -n ${SIFT_LLM_N_PREDICT:-512}
+      --parallel 1
+      --cont-batching
 
   core:
     container_name: searxng-core

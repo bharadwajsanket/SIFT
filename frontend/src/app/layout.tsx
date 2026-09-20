@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from 'next';
 import './globals.css';
 import { AppearanceProvider } from '@/context/AppearanceContext';
+import { AIProvider } from '@/context/AIContext';
 
 export const metadata: Metadata = {
   title: 'SIFT — Search & Information Filtering Tool',
@@ -108,13 +109,15 @@ export default function RootLayout({
       </head>
       <body>
         <AppearanceProvider>
-          <div className="siftAtmosphere" aria-hidden="true">
-            <div className="siftBackgroundLayer" />
-            <div className="siftOverlayLayer" />
-          </div>
-          <div className="siftAppRoot">
-            {children}
-          </div>
+          <AIProvider>
+            <div className="siftAtmosphere" aria-hidden="true">
+              <div className="siftBackgroundLayer" />
+              <div className="siftOverlayLayer" />
+            </div>
+            <div className="siftAppRoot">
+              {children}
+            </div>
+          </AIProvider>
         </AppearanceProvider>
       </body>
     </html>
