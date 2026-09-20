@@ -2,20 +2,33 @@
 
 import React, { useState } from 'react';
 import { SiftResult } from '@/app/api/search/route';
-import { ImageIcon, ExternalLinkIcon } from '@/components/icons';
+import { ImageIcon, ExternalLinkIcon, MaximizeIcon } from '@/components/icons';
 import styles from '@/app/search/search.module.css';
 
 interface ImageResultsProps {
   results: SiftResult[];
   selectedResult?: SiftResult | null;
   onSelectResult: (result: SiftResult) => void;
+  onOpenLightbox?: (result: SiftResult, index: number) => void;
 }
 
-export function ImageResults({ results, selectedResult, onSelectResult }: ImageResultsProps) {
+export function ImageResults({ 
+  results, 
+  selectedResult, 
+  onSelectResult,
+  onOpenLightbox 
+}: ImageResultsProps) {
   const [failedImages, setFailedImages] = useState<Record<string, boolean>>({});
 
   const handleImageError = (url: string) => {
     setFailedImages((prev) => ({ ...prev, [url]: true }));
+  };
+
+  const handleClick = (item: SiftResult, index: number) => {
+    onSelectResult(item);
+    if (onOpenLightbox) {
+      onOpenLightbox(item, index);
+    }
   };
 
   return (
@@ -29,9 +42,16 @@ export function ImageResults({ results, selectedResult, onSelectResult }: ImageR
           <div 
             key={`${item.url}-${index}`} 
             className={`${styles.imageMasonryCard} ${isSelected ? styles.imageMasonryCardSelected : ''}`}
-            onClick={() => onSelectResult(item)}
+            onClick={() => handleClick(item, index)}
             role="button"
             tabIndex={0}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                handleClick(item, index);
+              }
+            }}
+            title={item.title || 'Click to enlarge image'}
           >
             <div className={styles.imageMasonryWrapper}>
               {!isFailed && imageSource ? (
@@ -49,6 +69,10 @@ export function ImageResults({ results, selectedResult, onSelectResult }: ImageR
                   <span>Preview unavailable</span>
                 </div>
               )}
+
+              <div className={styles.imageOverlayAction}>
+                <MaximizeIcon size={14} />
+              </div>
 
               {item.resolution && (
                 <span className={styles.imageResolution}>{item.resolution}</span>

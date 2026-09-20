@@ -124,7 +124,7 @@ export async function GET(request: Request) {
       headers: {
         'Accept': 'application/json',
       },
-      signal: AbortSignal.timeout(8000),
+      signal: AbortSignal.timeout(12000),
     });
 
     if (!response.ok) {
@@ -137,6 +137,12 @@ export async function GET(request: Request) {
     const data = await response.json();
     const durationSeconds = ((Date.now() - startTime) / 1000).toFixed(2);
     
+    // Helper to strip raw HTML tags returned by some search engines
+    const cleanText = (str?: string): string => {
+      if (!str) return '';
+      return str.replace(/<[^>]*>?/gm, '').trim();
+    };
+
     // Normalize and preserve category specific fields
     const results: SiftResult[] = (data.results || []).map((item: any) => {
       let domain = '';
@@ -145,13 +151,13 @@ export async function GET(request: Request) {
           domain = new URL(item.url).hostname.replace(/^www\./, '');
         }
       } catch {
-        domain = item.url || '';
+        domain = cleanText(item.url) || '';
       }
 
       const enginesList: string[] = Array.isArray(item.engines) 
-        ? item.engines 
+        ? item.engines.map((e: any) => String(e).trim()).filter(Boolean)
         : item.engine 
-          ? [item.engine] 
+          ? [String(item.engine).trim()] 
           : [];
 
       // Determine best thumbnail
@@ -159,14 +165,14 @@ export async function GET(request: Request) {
       const imgSrc = item.img_src || item.thumbnail_src || undefined;
 
       const normalized: SiftResult = {
-        title: item.title || 'Untitled',
+        title: cleanText(item.title) || domain || 'Untitled Result',
         url: item.url || '#',
-        content: item.content || '',
+        content: cleanText(item.content) || '',
         template: item.template || 'default.html',
         category: item.category || searxCategory,
         engine: item.engine || (enginesList[0] || 'unknown'),
         engines: enginesList,
-        positions: item.positions || [],
+        positions: Array.isArray(item.positions) ? item.positions : [],
         score: typeof item.score === 'number' ? item.score : 0,
         domain,
         
@@ -177,29 +183,29 @@ export async function GET(request: Request) {
         
         // Video
         length: item.length || undefined,
-        uploader: item.metadata || item.author || undefined,
+        uploader: cleanText(item.metadata || item.author) || undefined,
         iframeSrc: item.iframe_src || undefined,
         
         // News
-        source: item.source || undefined,
+        source: cleanText(item.source) || undefined,
         publishedDate: item.publishedDate || item.pubdate || undefined,
         
         // Code / IT
-        packageName: item.package_name || undefined,
-        maintainer: item.maintainer || undefined,
+        packageName: cleanText(item.package_name) || undefined,
+        maintainer: cleanText(item.maintainer) || undefined,
         popularity: typeof item.popularity === 'number' ? item.popularity : undefined,
-        licenseName: item.license_name || undefined,
+        licenseName: cleanText(item.license_name) || undefined,
         licenseUrl: item.license_url || undefined,
         sourceCodeUrl: item.source_code_url || undefined,
         homepage: item.homepage || undefined,
-        tags: Array.isArray(item.tags) ? item.tags : undefined,
+        tags: Array.isArray(item.tags) ? item.tags.map((t: any) => cleanText(String(t))).filter(Boolean) : undefined,
         
         // Academic
-        authors: Array.isArray(item.authors) ? item.authors : undefined,
-        journal: item.journal || item.publisher || undefined,
-        doi: item.doi || undefined,
+        authors: Array.isArray(item.authors) ? item.authors.map((a: any) => cleanText(String(a))).filter(Boolean) : undefined,
+        journal: cleanText(item.journal || item.publisher) || undefined,
+        doi: cleanText(item.doi) || undefined,
         pdfUrl: item.pdf_url || undefined,
-        citations: item.comments || undefined,
+        citations: cleanText(item.comments) || undefined,
         
         // Maps
         latitude: typeof item.latitude === 'number' ? item.latitude : undefined,

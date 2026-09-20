@@ -15,14 +15,17 @@ export function AcademicResults({ results, selectedResult, onSelectResult }: Aca
       {results.map((item, index) => {
         const isSelected = selectedResult === item;
         const authorsText = item.authors && item.authors.length > 0 
-          ? item.authors.slice(0, 4).join(', ') + (item.authors.length > 4 ? ` et al.` : '')
+          ? item.authors.slice(0, 3).join(', ') + (item.authors.length > 3 ? ` et al.` : '')
           : null;
+        const enginesCount = item.engines.length;
 
         return (
           <article 
             key={`${item.url}-${index}`} 
             className={`${styles.academicCard} ${isSelected ? styles.cardSelected : ''}`}
             onClick={() => onSelectResult(item)}
+            role="button"
+            tabIndex={0}
           >
             <div className={styles.academicHeader}>
               <div className={styles.academicMeta}>
@@ -43,7 +46,7 @@ export function AcademicResults({ results, selectedResult, onSelectResult }: Aca
                   title="Open PDF document"
                 >
                   <PdfIcon size={12} />
-                  PDF
+                  <span>PDF</span>
                 </a>
               )}
             </div>
@@ -52,7 +55,7 @@ export function AcademicResults({ results, selectedResult, onSelectResult }: Aca
               <a 
                 href={item.url} 
                 target="_blank" 
-                rel="noopener noreferrer"
+                rel="noopener noreferrer" 
                 onClick={(e) => e.stopPropagation()}
               >
                 {item.title}
@@ -61,7 +64,7 @@ export function AcademicResults({ results, selectedResult, onSelectResult }: Aca
 
             {authorsText && (
               <div className={styles.authorsRow}>
-                <span className={styles.authorsLabel}>Authors:</span> {authorsText}
+                <span className={styles.authorsLabel}>Authors:</span> <span>{authorsText}</span>
               </div>
             )}
 
@@ -82,7 +85,7 @@ export function AcademicResults({ results, selectedResult, onSelectResult }: Aca
               <div className={styles.sourceBadges}>
                 <span className={styles.sourceCount}>
                   <LayersIcon size={12} />
-                  {item.engines.length} {item.engines.length === 1 ? 'source' : 'sources'}
+                  <span>{enginesCount} {enginesCount === 1 ? 'source' : 'sources'}</span>
                 </span>
                 <button 
                   type="button"
@@ -91,6 +94,7 @@ export function AcademicResults({ results, selectedResult, onSelectResult }: Aca
                     e.stopPropagation();
                     onSelectResult(item);
                   }}
+                  aria-label={`View details for ${item.title}`}
                 >
                   Details
                 </button>

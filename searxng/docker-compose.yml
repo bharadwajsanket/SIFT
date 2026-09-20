@@ -16,10 +16,13 @@ services:
 
   core:
     container_name: searxng-core
-    image: docker.io/searxng/searxng:${SEARXNG_VERSION:-latest}
+    image: docker.io/searxng/searxng:${SEARXNG_VERSION:-2026.8.29-d226b78bc}
     restart: unless-stopped
     ports:
       - "127.0.0.1:${SEARXNG_PORT:-8080}:8080"
+    dns:
+      - 192.168.1.1
+      - 1.1.1.1
     volumes:
       - ./core-config/:/etc/searxng/:Z
       - core-data:/var/cache/searxng/

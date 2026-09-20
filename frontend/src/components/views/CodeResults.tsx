@@ -15,12 +15,15 @@ export function CodeResults({ results, selectedResult, onSelectResult }: CodeRes
       {results.map((item, index) => {
         const isSelected = selectedResult === item;
         const displayName = item.packageName || item.title;
+        const enginesCount = item.engines.length;
 
         return (
           <article 
             key={`${item.url}-${index}`} 
             className={`${styles.codeCard} ${isSelected ? styles.cardSelected : ''}`}
             onClick={() => onSelectResult(item)}
+            role="button"
+            tabIndex={0}
           >
             <div className={styles.codeHeader}>
               <div className={styles.codeMeta}>
@@ -56,7 +59,7 @@ export function CodeResults({ results, selectedResult, onSelectResult }: CodeRes
 
             {item.tags && item.tags.length > 0 && (
               <div className={styles.tagsRow}>
-                {item.tags.slice(0, 6).map((tag, tIdx) => (
+                {item.tags.slice(0, 5).map((tag, tIdx) => (
                   <span key={tIdx} className={styles.tagBadge}>
                     {tag}
                   </span>
@@ -87,7 +90,7 @@ export function CodeResults({ results, selectedResult, onSelectResult }: CodeRes
               <div className={styles.sourceBadges}>
                 <span className={styles.sourceCount}>
                   <LayersIcon size={12} />
-                  {item.engines.length} {item.engines.length === 1 ? 'source' : 'sources'}
+                  <span>{enginesCount} {enginesCount === 1 ? 'source' : 'sources'}</span>
                 </span>
                 <button 
                   type="button"
@@ -96,6 +99,7 @@ export function CodeResults({ results, selectedResult, onSelectResult }: CodeRes
                     e.stopPropagation();
                     onSelectResult(item);
                   }}
+                  aria-label={`View details for ${displayName}`}
                 >
                   Details
                 </button>

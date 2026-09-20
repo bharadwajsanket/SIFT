@@ -13,7 +13,9 @@ import {
   NewsIcon, 
   CodeIcon, 
   AcademicIcon, 
-  MapIcon 
+  MapIcon,
+  ClockIcon,
+  LayersIcon
 } from '@/components/icons';
 import { SettingsPanel } from '@/components/SettingsPanel';
 import styles from './page.module.css';
@@ -63,7 +65,7 @@ export default function Home() {
     const updated = [
       trimmed,
       ...recentSearches.filter((q) => q.toLowerCase() !== trimmed.toLowerCase()),
-    ].slice(0, 5);
+    ].slice(0, 6);
     setRecentSearches(updated);
     localStorage.setItem('sift-recent-searches', JSON.stringify(updated));
   };
@@ -80,7 +82,7 @@ export default function Home() {
     localStorage.setItem('sift-recent-searches', JSON.stringify(updated));
   };
 
-  // Keyboard shortcut listener for '⌘K', 'Ctrl+K', '/', and 'Escape'
+  // Global keyboard shortcut listener for '⌘K', 'Ctrl+K', '/', and 'Escape'
   useEffect(() => {
     const handleGlobalKeyDown = (e: KeyboardEvent) => {
       if (
@@ -153,12 +155,13 @@ export default function Home() {
     };
   }, [query]);
 
-  const executeSearch = (searchQuery: string) => {
+  const executeSearch = (searchQuery: string, catId?: string) => {
     const trimmed = searchQuery.trim();
     if (!trimmed) return;
     saveRecentSearch(trimmed);
+    const effectiveCategory = catId || selectedCategory;
     startTransition(() => {
-      router.push(`/search?q=${encodeURIComponent(trimmed)}&category=${selectedCategory}`);
+      router.push(`/search?q=${encodeURIComponent(trimmed)}&category=${effectiveCategory}`);
     });
   };
 
@@ -188,15 +191,18 @@ export default function Home() {
   return (
     <div className={styles.pageContainer}>
       <header className={styles.topBar}>
-        <div className={styles.topBrand}>SIFT</div>
+        <div className={styles.topBrand}>
+          <span className={styles.brandTitle}>SIFT</span>
+          <span className={styles.brandSubtitle}>SEARCH WORKSTATION</span>
+        </div>
         <button 
           type="button" 
-          className={styles.iconBtn} 
+          className={styles.settingsIconBtn} 
           onClick={() => setIsSettingsOpen(true)}
           title="Preferences & Settings"
           aria-label="Open settings"
         >
-          <SettingsIcon size={16} />
+          <SettingsIcon size={17} />
         </button>
       </header>
 
@@ -204,10 +210,10 @@ export default function Home() {
         <div className={styles.heroBrand}>
           <div className={styles.logoWrapper}>
             <SiftLogo 
-              markSize={44} 
+              markSize={52} 
               orientation="vertical" 
               showTagline 
-              variant="color" 
+              variant="lavender" 
             />
           </div>
         </div>
@@ -221,12 +227,13 @@ export default function Home() {
             }}
           >
             <div className={styles.inputGroup}>
-              <SearchIcon size={17} className={styles.searchIcon} />
+              <SearchIcon size={18} className={styles.searchIcon} />
+              
               <input
                 ref={searchInputRef}
                 type="text"
                 className={styles.mainInput}
-                placeholder="What are you looking for?"
+                placeholder="Search anything..."
                 value={query}
                 onChange={(e) => {
                   setQuery(e.target.value);
@@ -255,13 +262,17 @@ export default function Home() {
                 </button>
               )}
 
+              <div className={styles.keyboardHint} aria-hidden="true">
+                <span>⌘K</span>
+              </div>
+
               <button 
                 type="submit" 
                 className={styles.searchSubmitAction}
                 disabled={isPending}
                 aria-label="Execute search"
               >
-                <SearchIcon size={15} />
+                <SearchIcon size={16} />
               </button>
             </div>
           </form>
@@ -280,7 +291,7 @@ export default function Home() {
                     executeSearch(item);
                   }}
                 >
-                  <SearchIcon size={13} className={styles.suggestionIcon} />
+                  <SearchIcon size={14} className={styles.suggestionIcon} />
                   <span>{item}</span>
                 </li>
               ))}
@@ -297,9 +308,14 @@ export default function Home() {
                 key={cat.id}
                 type="button"
                 className={`${styles.categoryTab} ${isActive ? styles.categoryTabActive : ''}`}
-                onClick={() => setSelectedCategory(cat.id)}
+                onClick={() => {
+                  setSelectedCategory(cat.id);
+                  if (query.trim()) {
+                    executeSearch(query, cat.id);
+                  }
+                }}
               >
-                <Icon size={13} />
+                <Icon size={14} />
                 <span>{cat.label}</span>
               </button>
             );
@@ -307,22 +323,26 @@ export default function Home() {
         </nav>
 
         {recentSearches.length > 0 ? (
-          <div className={styles.recentContainer}>
+          <div className={styles.recentSection}>
             <div className={styles.recentHeader}>
-              <span className={styles.recentTitle}>RECENT</span>
+              <div className={styles.recentTitleGroup}>
+                <ClockIcon size={12} />
+                <span className={styles.recentTitle}>RECENT SEARCHES</span>
+              </div>
               <button 
                 type="button" 
                 className={styles.clearHistoryBtn}
                 onClick={clearAllHistory}
               >
-                Clear history
+                Clear all
               </button>
             </div>
-            <div className={styles.recentList}>
-              {recentSearches.slice(0, 5).map((item) => (
+
+            <div className={styles.recentGrid}>
+              {recentSearches.slice(0, 6).map((item) => (
                 <div 
                   key={item} 
-                  className={styles.recentRow}
+                  className={styles.recentChip}
                   onClick={() => {
                     setQuery(item);
                     executeSearch(item);
@@ -330,12 +350,12 @@ export default function Home() {
                   role="button"
                   tabIndex={0}
                 >
-                  <span className={styles.recentText}>{item}</span>
+                  <span className={styles.recentChipText}>{item}</span>
                   <button
                     type="button"
-                    className={styles.recentDeleteBtn}
+                    className={styles.recentChipDeleteBtn}
                     onClick={(e) => deleteRecentSearch(e, item)}
-                    aria-label={`Remove ${item}`}
+                    aria-label={`Remove ${item} from history`}
                   >
                     <CloseIcon size={11} />
                   </button>
@@ -344,20 +364,32 @@ export default function Home() {
             </div>
           </div>
         ) : (
-          <div className={styles.signatureLine}>
-            <span>LOCAL INSTANCE</span>
-            <span className={styles.signatureSep}>/</span>
-            <span>MULTI-ENGINE</span>
-            <span className={styles.signatureSep}>/</span>
-            <span>PRIVATE</span>
+          <div className={styles.statusPillsRow}>
+            <div className={styles.statusPill}>
+              <span className={styles.statusDot} />
+              <span>LOCAL INSTANCE</span>
+            </div>
+            <div className={styles.statusDivider}>•</div>
+            <div className={styles.statusPill}>
+              <LayersIcon size={11} />
+              <span>MULTI-ENGINE AGGREGATE</span>
+            </div>
+            <div className={styles.statusDivider}>•</div>
+            <div className={styles.statusPill}>
+              <span>ZERO TELEMETRY</span>
+            </div>
           </div>
         )}
       </main>
 
       <footer className={styles.footer}>
-        <span>SIFT</span>
+        <div className={styles.footerBrand}>
+          <span>SIFT</span>
+          <span className={styles.footerDot}>•</span>
+          <span className={styles.footerTag}>PRIVATE WORKSTATION</span>
+        </div>
         <div className={styles.footerLinks}>
-          <a href="https://github.com" target="_blank" rel="noopener noreferrer">GitHub</a>
+          <span className={styles.footerShortcutHint}>Press <kbd>/</kbd> or <kbd>⌘K</kbd> to search</span>
         </div>
       </footer>
 

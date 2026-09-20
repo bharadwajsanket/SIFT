@@ -43,6 +43,7 @@ export function ResultDetails({ result, onClose, onOpenLightbox }: ResultDetails
 
   return (
     <div className={styles.inspectorCard} onClick={(e) => e.stopPropagation()}>
+      <div className={styles.bottomSheetHandle} aria-hidden="true" />
       <div className={styles.inspectorHeader}>
         <div className={styles.inspectorTitle}>
           <LayersIcon size={14} />

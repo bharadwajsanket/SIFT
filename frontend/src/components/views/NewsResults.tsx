@@ -23,17 +23,24 @@ export function NewsResults({ results, selectedResult, onSelectResult }: NewsRes
             })
           : null;
 
+        const enginesCount = item.engines.length;
+        const enginesSummary = enginesCount <= 2 
+          ? item.engines.join(', ')
+          : `${item.engines.slice(0, 2).join(', ')} +${enginesCount - 2}`;
+
         return (
           <article 
             key={`${item.url}-${index}`} 
             className={`${styles.newsCard} ${isSelected ? styles.cardSelected : ''}`}
             onClick={() => onSelectResult(item)}
+            role="button"
+            tabIndex={0}
           >
             <div className={styles.newsMain}>
               <div className={styles.newsHeader}>
                 <span className={styles.newsOutlet}>
                   <NewsIcon size={12} />
-                  {outlet}
+                  <span>{outlet}</span>
                 </span>
                 {dateStr && <span className={styles.newsDate}>• {dateStr}</span>}
               </div>
@@ -57,11 +64,13 @@ export function NewsResults({ results, selectedResult, onSelectResult }: NewsRes
                 <div className={styles.sourceBadges}>
                   <span className={styles.sourceCount}>
                     <LayersIcon size={12} />
-                    {item.engines.length} {item.engines.length === 1 ? 'source' : 'sources'}
+                    <span>{enginesCount} {enginesCount === 1 ? 'source' : 'sources'}</span>
                   </span>
-                  <span className={styles.sourceEngines}>
-                    ({item.engines.join(', ')})
-                  </span>
+                  {enginesSummary && (
+                    <span className={styles.sourceEngines} title={item.engines.join(', ')}>
+                      ({enginesSummary})
+                    </span>
+                  )}
                 </div>
 
                 <button 
@@ -71,6 +80,7 @@ export function NewsResults({ results, selectedResult, onSelectResult }: NewsRes
                     e.stopPropagation();
                     onSelectResult(item);
                   }}
+                  aria-label={`View details for ${item.title}`}
                 >
                   Details
                 </button>

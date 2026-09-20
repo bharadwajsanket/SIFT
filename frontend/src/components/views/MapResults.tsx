@@ -34,12 +34,15 @@ export function MapResults({ results, selectedResult, onSelectResult }: MapResul
         if (item.address?.country) addressParts.push(item.address.country);
 
         const primaryMapUrl = activeProvider.buildPlaceUrl(item.title, item.latitude, item.longitude);
+        const enginesCount = item.engines.length;
 
         return (
           <article 
             key={`${item.url}-${index}`} 
             className={`${styles.mapCard} ${isSelected ? styles.cardSelected : ''}`}
             onClick={() => onSelectResult(item)}
+            role="button"
+            tabIndex={0}
           >
             <div className={styles.mapHeader}>
               <div className={styles.mapMeta}>
@@ -47,7 +50,7 @@ export function MapResults({ results, selectedResult, onSelectResult }: MapResul
                 <span className={styles.domainName}>{item.domain}</span>
                 {typeof item.latitude === 'number' && typeof item.longitude === 'number' && (
                   <span className={styles.coordsTag}>
-                    {item.latitude.toFixed(4)}, {item.longitude.toFixed(4)}
+                    {item.latitude.toFixed(3)}, {item.longitude.toFixed(3)}
                   </span>
                 )}
               </div>
@@ -60,7 +63,7 @@ export function MapResults({ results, selectedResult, onSelectResult }: MapResul
                 onClick={(e) => e.stopPropagation()}
                 title={`Open in ${activeProvider.displayName}`}
               >
-                <span>Open in {activeProvider.displayName}</span>
+                <span>{activeProvider.displayName}</span>
                 <ExternalLinkIcon size={11} />
               </a>
             </div>
@@ -69,7 +72,7 @@ export function MapResults({ results, selectedResult, onSelectResult }: MapResul
               <a 
                 href={primaryMapUrl} 
                 target="_blank" 
-                rel="noopener noreferrer"
+                rel="noopener noreferrer" 
                 onClick={(e) => e.stopPropagation()}
               >
                 {item.title}
@@ -87,7 +90,7 @@ export function MapResults({ results, selectedResult, onSelectResult }: MapResul
             )}
 
             <div className={styles.mapAltRow}>
-              <span className={styles.altLabel}>Alternative destinations:</span>
+              <span className={styles.altLabel}>Maps:</span>
               <div className={styles.altLinks}>
                 {Object.values(MAP_PROVIDERS)
                   .filter((p) => p.id !== activeProvider.id)
@@ -110,10 +113,7 @@ export function MapResults({ results, selectedResult, onSelectResult }: MapResul
               <div className={styles.sourceBadges}>
                 <span className={styles.sourceCount}>
                   <LayersIcon size={12} />
-                  {item.engines.length} {item.engines.length === 1 ? 'source' : 'sources'}
-                </span>
-                <span className={styles.sourceEngines}>
-                  ({item.engines.join(', ')})
+                  <span>{enginesCount} {enginesCount === 1 ? 'source' : 'sources'}</span>
                 </span>
               </div>
 
@@ -124,6 +124,7 @@ export function MapResults({ results, selectedResult, onSelectResult }: MapResul
                   e.stopPropagation();
                   onSelectResult(item);
                 }}
+                aria-label={`View details for ${item.title}`}
               >
                 Details
               </button>

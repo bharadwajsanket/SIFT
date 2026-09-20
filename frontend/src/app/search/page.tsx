@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useRef, Suspense } from 'react';
+import React, { useState, useEffect, useRef, Suspense, useCallback } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { SiftResult } from '@/app/api/search/route';
 import { SiftLogo } from '@/components/SiftLogo';
@@ -74,6 +74,7 @@ function SearchController() {
   // Inspector, Lightbox & Settings
   const [selectedResult, setSelectedResult] = useState<SiftResult | null>(null);
   const [lightboxResult, setLightboxResult] = useState<SiftResult | null>(null);
+  const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
 
   // Autocomplete
@@ -83,6 +84,7 @@ function SearchController() {
 
   const searchInputRef = useRef<HTMLInputElement>(null);
   const searchBoxRef = useRef<HTMLDivElement>(null);
+  const categoryBarRef = useRef<HTMLElement>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
 
   // Sync params from URL
@@ -91,6 +93,14 @@ function SearchController() {
     setSearchInput(queryParam);
     setCategory(categoryParam);
     setPage(1);
+
+    // Auto scroll active category tab into view on mobile
+    if (categoryBarRef.current) {
+      const activeBtn = categoryBarRef.current.querySelector('[data-active="true"]') as HTMLElement;
+      if (activeBtn) {
+        activeBtn.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+      }
+    }
   }, [queryParam, categoryParam]);
 
   // Load safeSearch setting
@@ -103,12 +113,16 @@ function SearchController() {
 
   // Main search fetcher
   useEffect(() => {
+    const abortController = new AbortController();
+
     const executeFetch = async () => {
       if (!query.trim()) return;
 
       setLoading(true);
       setError(null);
       setSelectedResult(null);
+      setLightboxResult(null);
+      setLightboxIndex(null);
 
       try {
         const url = new URL('/api/search', window.location.origin);
@@ -139,28 +153,39 @@ function SearchController() {
           }
         } catch {}
 
-        const response = await fetch(url.toString());
+        const response = await fetch(url.toString(), {
+          signal: abortController.signal,
+        });
         const data = await response.json();
 
         if (response.ok) {
           setResults(data.results || []);
           setResultCount(data.count || 0);
           setDuration(data.duration || '0.00');
-          if (data.results && data.results.length > 0) {
+          // For non-image categories on desktop, default select the first result for inspector context if desired
+          if (data.results && data.results.length > 0 && category !== 'images' && typeof window !== 'undefined' && window.innerWidth > 960) {
             setSelectedResult(data.results[0]);
           }
         } else {
           setError(data.error || 'Failed to retrieve search results.');
         }
-      } catch (err) {
-        console.error('Fetch error:', err);
-        setError('Unable to contact SIFT aggregator.');
+      } catch (err: any) {
+        if (err.name !== 'AbortError') {
+          console.error('Fetch error:', err);
+          setError('Unable to contact SIFT aggregator.');
+        }
       } finally {
-        setLoading(false);
+        if (!abortController.signal.aborted) {
+          setLoading(false);
+        }
       }
     };
 
     executeFetch();
+
+    return () => {
+      abortController.abort();
+    };
   }, [query, category, page, timeRange, language, safeSearch, isLocationActive, userLocation]);
 
   // Explicit location permission handler
@@ -282,6 +307,9 @@ function SearchController() {
   const handleCategorySwitch = (catId: string) => {
     setCategory(catId);
     setPage(1);
+    setSelectedResult(null);
+    setLightboxResult(null);
+    setLightboxIndex(null);
     const params = new URLSearchParams();
     params.set('q', query);
     params.set('category', catId);
@@ -310,12 +338,35 @@ function SearchController() {
     }
   };
 
+  // Lightbox handlers
+  const handleOpenLightbox = (result: SiftResult, index?: number) => {
+    const idx = index !== undefined ? index : results.indexOf(result);
+    setLightboxIndex(idx >= 0 ? idx : null);
+    setLightboxResult(result);
+  };
+
+  const handlePrevImage = useCallback(() => {
+    if (lightboxIndex !== null && lightboxIndex > 0) {
+      const prevIdx = lightboxIndex - 1;
+      setLightboxIndex(prevIdx);
+      setLightboxResult(results[prevIdx]);
+    }
+  }, [lightboxIndex, results]);
+
+  const handleNextImage = useCallback(() => {
+    if (lightboxIndex !== null && lightboxIndex < results.length - 1) {
+      const nextIdx = lightboxIndex + 1;
+      setLightboxIndex(nextIdx);
+      setLightboxResult(results[nextIdx]);
+    }
+  }, [lightboxIndex, results]);
+
   return (
     <div className={styles.searchContainer}>
       <header className={styles.header}>
         <div className={styles.headerTop}>
           <div className={styles.brand} onClick={() => router.push('/')} title="Return to SIFT Home" role="button" tabIndex={0}>
-            <SiftLogo markSize={24} variant="color" />
+            <SiftLogo markSize={28} variant="lavender" />
           </div>
 
           <div className={styles.searchFormWrapper} ref={searchBoxRef}>
@@ -336,6 +387,7 @@ function SearchController() {
                   onFocus={() => setShowSuggestions(true)}
                   autoComplete="off"
                   spellCheck="false"
+                  placeholder="Search SIFT..."
                 />
 
                 {searchInput && (
@@ -393,7 +445,7 @@ function SearchController() {
           </div>
         </div>
 
-        <nav className={styles.categoryBar} aria-label="Categories">
+        <nav ref={categoryBarRef} className={styles.categoryBar} aria-label="Search Categories">
           {CATEGORIES.map((cat) => {
             const Icon = cat.icon;
             const isActive = category === cat.id;
@@ -401,6 +453,7 @@ function SearchController() {
               <button
                 key={cat.id}
                 type="button"
+                data-active={isActive ? 'true' : 'false'}
                 className={`${styles.categoryTab} ${isActive ? styles.categoryTabActive : ''}`}
                 onClick={() => handleCategorySwitch(cat.id)}
               >
@@ -430,7 +483,7 @@ function SearchController() {
         isDismissed={isLocationDismissed}
       />
 
-      <main className={`${styles.mainLayout} ${!selectedResult ? styles.singleColumnLayout : ''}`}>
+      <main className={`${styles.mainLayout} ${!selectedResult || category === 'images' ? styles.singleColumnLayout : ''}`}>
         <section className={styles.resultsArea}>
           {!loading && !error && results.length > 0 && (
             <div className={styles.metricsRow}>
@@ -441,12 +494,12 @@ function SearchController() {
 
           {loading ? (
             <div className={styles.skeletonList}>
-              {Array.from({ length: 6 }).map((_, i) => (
+              {Array.from({ length: 5 }).map((_, i) => (
                 <div key={i} className={styles.skeletonCard}>
-                  <div className={styles.skeletonLine} style={{ width: '25%', height: '10px' }} />
-                  <div className={styles.skeletonLine} style={{ width: '60%', height: '16px' }} />
-                  <div className={styles.skeletonLine} style={{ width: '90%', height: '12px' }} />
-                  <div className={styles.skeletonLine} style={{ width: '75%', height: '12px' }} />
+                  <div className={styles.skeletonLine} style={{ width: '22%', height: '10px' }} />
+                  <div className={styles.skeletonLine} style={{ width: '65%', height: '18px' }} />
+                  <div className={styles.skeletonLine} style={{ width: '92%', height: '13px' }} />
+                  <div className={styles.skeletonLine} style={{ width: '80%', height: '13px' }} />
                 </div>
               ))}
             </div>
@@ -471,7 +524,8 @@ function SearchController() {
                 <ImageResults 
                   results={results} 
                   selectedResult={selectedResult}
-                  onSelectResult={(item) => setSelectedResult(item)} 
+                  onSelectResult={(item) => setSelectedResult(item)}
+                  onOpenLightbox={handleOpenLightbox}
                 />
               )}
               {category === 'videos' && (
@@ -526,11 +580,11 @@ function SearchController() {
           )}
         </section>
 
-        {!loading && selectedResult && (
+        {!loading && selectedResult && category !== 'images' && (
           <aside 
             className={styles.sideColumn}
             onClick={() => {
-              if (window.innerWidth <= 900) {
+              if (typeof window !== 'undefined' && window.innerWidth <= 960) {
                 setSelectedResult(null);
               }
             }}
@@ -538,7 +592,7 @@ function SearchController() {
             <ResultDetails 
               result={selectedResult} 
               onClose={() => setSelectedResult(null)} 
-              onOpenLightbox={(res) => setLightboxResult(res)}
+              onOpenLightbox={(res) => handleOpenLightbox(res)}
             />
           </aside>
         )}
@@ -546,7 +600,16 @@ function SearchController() {
 
       <ImageLightbox 
         result={lightboxResult} 
-        onClose={() => setLightboxResult(null)} 
+        onClose={() => {
+          setLightboxResult(null);
+          setLightboxIndex(null);
+        }}
+        onPrev={handlePrevImage}
+        onNext={handleNextImage}
+        hasPrev={lightboxIndex !== null && lightboxIndex > 0}
+        hasNext={lightboxIndex !== null && lightboxIndex < results.length - 1}
+        currentIndex={lightboxIndex ?? undefined}
+        totalCount={results.length}
       />
 
       <SettingsPanel 
@@ -560,7 +623,7 @@ function SearchController() {
 export default function SearchPage() {
   return (
     <Suspense fallback={
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '100vh', backgroundColor: '#0d0e12', color: '#f4f5f7', fontFamily: 'monospace' }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '100vh', color: 'var(--text-muted)', fontFamily: 'var(--font-mono)' }}>
         Loading SIFT search...
       </div>
     }>

@@ -14,14 +14,22 @@ export function WebResults({ results, selectedResult, onSelectResult }: WebResul
     <div className={styles.webList}>
       {results.map((item, index) => {
         const isSelected = selectedResult === item;
+        const enginesCount = item.engines.length;
+        const enginesSummary = enginesCount <= 2 
+          ? item.engines.join(', ')
+          : `${item.engines.slice(0, 2).join(', ')} +${enginesCount - 2}`;
+
         return (
           <article 
             key={`${item.url}-${index}`} 
             className={`${styles.webCard} ${isSelected ? styles.cardSelected : ''}`}
             onClick={() => onSelectResult(item)}
+            role="button"
+            tabIndex={0}
           >
             <div className={styles.metaRow}>
-              <span className={styles.domainName}>{item.domain}</span>
+              <span className={styles.domainDot} aria-hidden="true" />
+              <span className={styles.domainName} title={item.domain}>{item.domain}</span>
               {item.publishedDate && (
                 <span className={styles.pubDate}>
                   • {new Date(item.publishedDate).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })}
@@ -48,11 +56,13 @@ export function WebResults({ results, selectedResult, onSelectResult }: WebResul
               <div className={styles.sourceBadges}>
                 <span className={styles.sourceCount}>
                   <LayersIcon size={12} />
-                  {item.engines.length} {item.engines.length === 1 ? 'source' : 'sources'}
+                  <span>{enginesCount} {enginesCount === 1 ? 'source' : 'sources'}</span>
                 </span>
-                <span className={styles.sourceEngines}>
-                  ({item.engines.join(', ')})
-                </span>
+                {enginesSummary && (
+                  <span className={styles.sourceEngines} title={item.engines.join(', ')}>
+                    ({enginesSummary})
+                  </span>
+                )}
               </div>
 
               <button 
@@ -62,6 +72,7 @@ export function WebResults({ results, selectedResult, onSelectResult }: WebResul
                   e.stopPropagation();
                   onSelectResult(item);
                 }}
+                aria-label={`View details for ${item.title}`}
               >
                 Details
               </button>

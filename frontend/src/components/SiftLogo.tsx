@@ -1,6 +1,6 @@
 import React from 'react';
 
-export type SiftLogoVariant = 'color' | 'mono-dark' | 'mono-light' | 'outline';
+export type SiftLogoVariant = 'color' | 'mono-dark' | 'mono-light' | 'outline' | 'lavender';
 
 interface SiftMarkProps {
   size?: number;
@@ -8,24 +8,29 @@ interface SiftMarkProps {
   variant?: SiftLogoVariant;
 }
 
-export function SiftMark({ size = 28, className = '', variant = 'color' }: SiftMarkProps) {
+export function SiftMark({ size = 28, className = '', variant = 'lavender' }: SiftMarkProps) {
   const gradientId = `sift-chevron-grad-${variant}-${size}`;
   const dotGradientId = `sift-signal-grad-${variant}-${size}`;
 
   let chevronStroke = `url(#${gradientId})`;
-  let signalFill = '#22C1C3';
-  let noiseFill = '#8A9199';
-  let noiseOpacity = '0.75';
+  let signalFill = '#c4b5fd';
+  let noiseFill = '#94a3b8';
+  let noiseOpacity = '0.65';
 
-  if (variant === 'mono-dark') {
-    chevronStroke = '#F4F5F7';
-    signalFill = '#F4F5F7';
-    noiseFill = '#A8AFB8';
+  if (variant === 'lavender' || variant === 'color') {
+    chevronStroke = `url(#${gradientId})`;
+    signalFill = `url(#${dotGradientId})`;
+    noiseFill = '#a78bfa';
+    noiseOpacity = '0.55';
+  } else if (variant === 'mono-dark') {
+    chevronStroke = '#f8fafc';
+    signalFill = '#f8fafc';
+    noiseFill = '#cbd5e1';
     noiseOpacity = '0.65';
   } else if (variant === 'mono-light') {
-    chevronStroke = '#1A1D23';
-    signalFill = '#1A1D23';
-    noiseFill = '#6B7280';
+    chevronStroke = '#0f172a';
+    signalFill = '#0f172a';
+    noiseFill = '#64748b';
     noiseOpacity = '0.75';
   } else if (variant === 'outline') {
     chevronStroke = 'currentColor';
@@ -46,12 +51,12 @@ export function SiftMark({ size = 28, className = '', variant = 'color' }: SiftM
     >
       <defs>
         <linearGradient id={gradientId} x1="23" y1="10" x2="33" y2="38" gradientUnits="userSpaceOnUse">
-          <stop offset="0%" stopColor="#4A90E2" />
-          <stop offset="100%" stopColor="#6C5CE7" />
+          <stop offset="0%" stopColor="#c4b5fd" />
+          <stop offset="100%" stopColor="#818cf8" />
         </linearGradient>
         <linearGradient id={dotGradientId} x1="37" y1="20" x2="45" y2="28" gradientUnits="userSpaceOnUse">
-          <stop offset="0%" stopColor="#22C1C3" />
-          <stop offset="100%" stopColor="#4A90E2" />
+          <stop offset="0%" stopColor="#38bdf8" />
+          <stop offset="100%" stopColor="#a78bfa" />
         </linearGradient>
       </defs>
 
@@ -92,7 +97,7 @@ export function SiftMark({ size = 28, className = '', variant = 'color' }: SiftM
           cx="41"
           cy="24"
           r="3.5"
-          fill={variant === 'color' ? `url(#${dotGradientId})` : signalFill}
+          fill={signalFill}
         />
       )}
     </svg>
@@ -111,7 +116,7 @@ interface SiftLogoProps {
 export function SiftLogo({
   markSize = 26,
   className = '',
-  variant = 'color',
+  variant = 'lavender',
   showTagline = false,
   showSubtitle = false,
   orientation = 'horizontal',
@@ -126,7 +131,7 @@ export function SiftLogo({
         flexDirection: isVertical ? 'column' : 'row',
         alignItems: 'center',
         justifyContent: isVertical ? 'center' : 'flex-start',
-        gap: isVertical ? '0.65rem' : '0.65rem',
+        gap: isVertical ? '0.75rem' : '0.65rem',
         textDecoration: 'none',
         userSelect: 'none',
       }}
@@ -145,9 +150,9 @@ export function SiftLogo({
         <span
           style={{
             fontFamily: 'var(--font-sans)',
-            fontWeight: 800,
-            fontSize: isVertical ? `${Math.max(28, markSize * 0.75)}px` : `${Math.max(16, markSize * 0.7)}px`,
-            letterSpacing: '0.06em',
+            fontWeight: 700,
+            fontSize: isVertical ? `${Math.max(30, markSize * 0.85)}px` : `${Math.max(16, markSize * 0.7)}px`,
+            letterSpacing: '0.08em',
             color: 'var(--text)',
             lineHeight: 1,
             display: 'inline-block',
@@ -160,15 +165,15 @@ export function SiftLogo({
           <span
             style={{
               fontFamily: 'var(--font-mono)',
-              fontSize: '0.72rem',
+              fontSize: '0.7rem',
               fontWeight: 500,
-              letterSpacing: '0.05em',
+              letterSpacing: '0.06em',
               color: 'var(--text-muted)',
-              marginTop: '0.35rem',
+              marginTop: '0.4rem',
               textTransform: 'uppercase',
             }}
           >
-            Search & Information Filtering Tool
+            Search &amp; Information Filtering Tool
           </span>
         )}
 
@@ -176,13 +181,14 @@ export function SiftLogo({
           <span
             style={{
               fontFamily: 'var(--font-sans)',
-              fontSize: '0.92rem',
+              fontSize: '0.96rem',
               color: 'var(--text-secondary)',
-              marginTop: '0.35rem',
+              marginTop: '0.4rem',
               letterSpacing: '-0.01em',
+              fontWeight: 400,
             }}
           >
-            Search privately. Find clearly.
+            Search without noise.
           </span>
         )}
       </div>
