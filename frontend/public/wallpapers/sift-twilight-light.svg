@@ -1,0 +1,32 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1920 1080" width="100%" height="100%">
+  <defs>
+    <linearGradient id="twilightLightSky" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#e8e0f0"/>
+      <stop offset="35%" stop-color="#f5e6eb"/>
+      <stop offset="70%" stop-color="#fdf0ea"/>
+      <stop offset="100%" stop-color="#fcf8f6"/>
+    </linearGradient>
+    <linearGradient id="softRoseRidge1" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#d4b8cc" stop-opacity="0.75"/>
+      <stop offset="100%" stop-color="#ecd9e5" stop-opacity="0.4"/>
+    </linearGradient>
+    <linearGradient id="softRoseRidge2" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#b89cb5" stop-opacity="0.8"/>
+      <stop offset="100%" stop-color="#dfcadb" stop-opacity="0.45"/>
+    </linearGradient>
+    <linearGradient id="softRoseRidge3" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#9a819b" stop-opacity="0.85"/>
+      <stop offset="100%" stop-color="#cbb5c8" stop-opacity="0.5"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="1920" height="1080" fill="url(#twilightLightSky)"/>
+
+  <!-- Morning Rose Valley Layers -->
+  <path d="M0,580 Q480,480 1020,540 T1920,510 L1920,1080 L0,1080 Z" fill="url(#softRoseRidge1)"/>
+  <path d="M0,670 Q640,560 1200,640 T1920,600 L1920,1080 L0,1080 Z" fill="url(#softRoseRidge2)"/>
+  <path d="M0,770 Q520,680 1140,730 T1920,690 L1920,1080 L0,1080 Z" fill="url(#softRoseRidge3)"/>
+
+  <!-- Golden Morning Ambient Gradient -->
+  <ellipse cx="960" cy="980" rx="900" ry="180" fill="#fff5ea" opacity="0.65"/>
+</svg>

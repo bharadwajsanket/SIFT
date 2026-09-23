@@ -1,0 +1,47 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1920 1080" width="100%" height="100%">
+  <defs>
+    <linearGradient id="mistSky" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#dce6f2"/>
+      <stop offset="40%" stop-color="#e8eef6"/>
+      <stop offset="80%" stop-color="#f2f5fa"/>
+      <stop offset="100%" stop-color="#fbfcfd"/>
+    </linearGradient>
+    <linearGradient id="waterGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#e2ebf5"/>
+      <stop offset="50%" stop-color="#d6e2ef"/>
+      <stop offset="100%" stop-color="#cbd8e8"/>
+    </linearGradient>
+    <linearGradient id="softMist" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#ffffff" stop-opacity="0.8"/>
+      <stop offset="50%" stop-color="#f0f4f9" stop-opacity="0.4"/>
+      <stop offset="100%" stop-color="#e4ecf5" stop-opacity="0.1"/>
+    </linearGradient>
+    <linearGradient id="hill1" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#b8c6dc" stop-opacity="0.65"/>
+      <stop offset="100%" stop-color="#dbe3ef" stop-opacity="0.3"/>
+    </linearGradient>
+    <linearGradient id="hill2" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#a4b4cf" stop-opacity="0.75"/>
+      <stop offset="100%" stop-color="#ccd8e8" stop-opacity="0.4"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="1920" height="1080" fill="url(#mistSky)"/>
+
+  <!-- Distant atmospheric hills -->
+  <path d="M0,520 Q480,440 960,490 T1920,460 L1920,1080 L0,1080 Z" fill="url(#hill1)"/>
+  <path d="M0,580 Q520,510 1080,560 T1920,530 L1920,1080 L0,1080 Z" fill="url(#hill2)"/>
+
+  <!-- Horizon Mist Bank -->
+  <ellipse cx="960" cy="560" rx="900" ry="120" fill="url(#softMist)"/>
+
+  <!-- Calm Lake Surface -->
+  <rect y="600" width="1920" height="480" fill="url(#waterGrad)"/>
+
+  <!-- Water Surface Mist & Light Sheen -->
+  <ellipse cx="960" cy="680" rx="800" ry="80" fill="#ffffff" opacity="0.45"/>
+  <ellipse cx="640" cy="740" rx="500" ry="50" fill="#ffffff" opacity="0.3"/>
+  <ellipse cx="1280" cy="800" rx="600" ry="60" fill="#ffffff" opacity="0.35"/>
+  
+  <rect y="880" width="1920" height="200" fill="url(#softMist)"/>
+</svg>

@@ -1,30 +1,73 @@
 <div align="center">
-  <img src="frontend/public/icon.svg" width="64" height="64" alt="SIFT Logo" />
+  <img src="frontend/public/icon.svg" width="68" height="68" alt="SIFT Logo" />
   <h1>SIFT</h1>
   <p><strong>Search &amp; Information Filtering Tool</strong></p>
-  <p><em>A private, self-hosted search instrument with standalone local AI overview.</em></p>
+  <p><em>A private, self-hosted search instrument with a spatial canvas UI and offline local AI.</em></p>
 </div>
 
 ---
 
-## What is SIFT?
+## Why I built this
 
-**SIFT** is a personal, privacy-focused search workstation built on top of [SearXNG](https://github.com/searxng/searxng) and [llama.cpp](https://github.com/ggerganov/llama.cpp).
+I use search hundreds of times a day.
 
-It combines information-dense presentation, atmospheric visual aesthetics, and local-first customization with multi-engine search aggregation and a standalone local AI answer layer. SIFT is **not a ChatGPT clone** or a conversational chatbot—it is a search tool designed to answer technical queries and simple questions immediately, while keeping full web search results instantly accessible.
+Over time, default search engines started feeling increasingly cluttered: sponsored links at the top, SEO spam everywhere, forced accounts, tracking, and interfaces designed more like ad feeds than instruments.
+
+I didn't want another cloud subscription, another account to manage, or a website trying to profile me. I just wanted a fast, private, self-hosted search setup that felt like my own workspace—where the UI looks great, the results are clean, and if I want an AI summary, it runs locally on my own machine without sending queries to a third-party API.
+
+So I built SIFT.
 
 ---
 
-## System Architecture
+## What SIFT actually is
+
+SIFT is a personal search workstation. It pulls together two main pieces:
+
+1. **[SearXNG](https://github.com/searxng/searxng)** under the hood to aggregate search results across Google, Brave, Bing, DuckDuckGo, Wikipedia, GitHub, and more without tracking.
+2. **[llama.cpp](https://github.com/ggerganov/llama.cpp)** running an offline GGUF model (`Qwen3-4B`) to answer technical and factual questions immediately.
+
+The whole thing runs locally via Docker, keeps all your settings in your browser, and doesn't phone home.
+
+---
+
+## What it can do
+
+- **Spatial Home Canvas**: Instead of an empty white page with a box in the middle, the home screen uses the peripheral space for subtle, useful widgets—a clock with custom timezones, weather via Open-Meteo, customizable pinned shortcuts with auto-fetched favicons, and local search history.
+- **Glass & Matte Visual Modes**: Switch between rich translucent glassmorphism (with backdrop blur and subtle reflections) and a clean, high-contrast matte mode across Dark, Light, and System themes.
+- **Local AI Overview**: Runs completely offline through `llama.cpp`. No OpenAI, no Gemini, no Groq, no API keys. If you don't want AI in your search, turn the toggle off in settings and it makes zero requests.
+- **Dedicated Category Stages**: A centered, balanced responsive layout across Web, Images, Videos, News, Academic, Code, and Maps.
+- **Local-First & Private**: No analytics, no telemetry, no tracking cookies. Everything you configure stays in your browser's `localStorage` and `IndexedDB`.
+
+---
+
+## Search Categories
+
+SIFT doesn't throw every search result into the same generic list. Each category gets a layout built for that type of content:
+
+| Category | How it's handled |
+| :--- | :--- |
+| **Web** | Multi-engine consensus indicators, domain badges, direct result inspector, and clean metadata. |
+| **Images** | Responsive masonry grid, resolution tags, full-screen lightbox with keyboard (`←`/`→`) and swipe navigation, and proxied downloads. |
+| **Videos** | Duration pills, channel/creator attribution, platform badges, and rich media cards. |
+| **News** | Publication timestamps, news outlet attribution, thumbnail previews, and multi-source consensus. |
+| **Academic** | Author lists (`et al.`), journal/publisher tags, direct PDF badges, DOI links, and citation counts. |
+| **Code** | Repository names, star counts, software license badges, homepage links, and topic tags. |
+| **Maps** | Coordinate badges, structured address summaries, and one-click navigation to OpenStreetMap, Apple Maps, Google Maps, or Photon. |
+
+---
+
+## How it works
+
+Under the hood, it's pretty straightforward:
 
 ```text
                                ┌────────────────────────┐
                                │    Client Browser      │
                                └───────────┬────────────┘
-                                           │ (search.edith.local)
+                                           │ (HTTP / HTTPS)
                                            ▼
                                ┌────────────────────────┐
-                               │  Nginx Proxy Manager   │ (Reverse Proxy / SSL)
+                               │  Nginx / Reverse Proxy │ (Optional SSL Termination)
                                └───────────┬────────────┘
                                            │
                                            ▼
@@ -33,7 +76,7 @@ It combines information-dense presentation, atmospheric visual aesthetics, and l
  │                                                                             │
  │  ┌───────────────────────────────────────────────────────────────────────┐  │
  │  │                         SIFT Web Frontend (:3000)                     │  │
- │  │                            (Next.js / React 19)                       │  │
+ │  │                      (Next.js 15 / React 19 / TypeScript)             │  │
  │  └───────────────────┬───────────────────────────────────┬───────────────┘  │
  │                      │                                   │                  │
  │       (Local AI)     │                                   │ (Web Search)     │
@@ -53,283 +96,101 @@ It combines information-dense presentation, atmospheric visual aesthetics, and l
                                                               ▼
                                             ┌───────────────────────────────────┐
                                             │ Upstream Search Engines           │
-                                            │ (Google, Brave, Bing, DDG,        │
+                                            │ (Google, Brave, Bing, DuckDuckGo, │
                                             │  Wikipedia, GitHub, OpenAlex...)  │
                                             └───────────────────────────────────┘
 ```
 
-### Docker Services
-- **`sift-web`**: Next.js 16 frontend workstation serving the interface and `/api/ai` / `/api/search` endpoints.
-- **`searxng-core`**: Pinned SearXNG metasearch engine bound locally to `127.0.0.1:8080`.
-- **`searxng-valkey`**: In-memory caching and rate-limiting store.
-- **`llama-server`**: Embedded [llama.cpp server](https://github.com/ggerganov/llama.cpp) (`ghcr.io/ggml-org/llama.cpp:server`) providing local CPU inference for GGUF models. Internal-only to the Docker network (`http://llama-server:8080`) and not exposed directly to the LAN.
-
-### DNS Resolution
-SearXNG is configured with upstream DNS servers (`192.168.1.1` and `1.1.1.1`) inside `searxng/docker-compose.yml`. This ensures that the container can resolve upstream search engine hostnames reliably across varied local network environments.
+- **`sift-web`**: The Next.js frontend serving the interface and handling internal `/api/search` and `/api/ai` routes.
+- **`searxng-core`**: The SearXNG engine querying upstream providers.
+- **`searxng-valkey`**: Caching layer for SearXNG so repeated queries don't hit upstreams unnecessarily.
+- **`llama-server`**: Embedded llama.cpp server providing CPU inference for local GGUF models. It is only accessible within the internal Docker network.
 
 ---
 
-## Local AI Overview
+## Quick Start
 
-SIFT provides a compact, standalone **Local AI Overview** above normal search results.
-
-```text
-Query ("linux command to zip a file")
-  ├── Local Qwen model via llama.cpp ──▶ ✦ AI Overview (Direct streaming answer)
-  └── SearXNG Aggregator            ──▶ Normal web results (Independent)
-```
-
-### Core Characteristics
-- **Standalone & Independent**: Answers CLI, code, and factual queries directly from model weights. Does not require web scraping, embeddings, or vector databases.
-- **Decoupled Execution**: Normal search results and the AI Overview execute in parallel. An AI generation never delays or blocks web search results.
-- **100% Private & Local**: Zero external cloud APIs (no OpenAI, no Gemini, no Anthropic, no Groq), no Ollama dependency, and zero telemetry. Queries remain strictly inside your local environment.
-- **Continuous Small Follow-Up**: Ask quick follow-up questions directly underneath the answer with lightweight, in-memory session turns.
-- **Client-Side Preference**: The `AI Overview [ ON / OFF ]` toggle in Settings is stored per-device in `localStorage`. When **OFF**, zero requests are sent to `/api/ai` and normal search operates with zero overhead.
-- **Graceful Offline Fallback**: If the local AI container is offline or the model is missing, normal search continues working completely uninterrupted.
-
----
-
-## Recommended Model & Placement
-
-### Model Details
-- **Recommended Model**: `Qwen3-4B-Instruct-2507`
-- **Format**: GGUF (`Q4_K_M` quantization)
-- **Filename**: `Qwen3-4B-Instruct-2507-Q4_K_M.gguf`
-- **Download**: [Official Hugging Face GGUF](https://huggingface.co/unsloth/Qwen3-4B-Instruct-2507-GGUF/blob/main/Qwen3-4B-Instruct-2507-Q4_K_M.gguf)
-
-> [!NOTE]
-> GGUF model binaries are intentionally **NOT** tracked in the Git repository due to file size. `models/*.gguf` is ignored by `.gitignore`. You must download and place the model manually.
-
-### Model Placement
-Place the downloaded GGUF file in the `models/` directory:
-```bash
-SIFT/
-├── frontend/
-├── searxng/
-├── models/
-│   ├── .gitkeep
-│   └── Qwen3-4B-Instruct-2507-Q4_K_M.gguf
-```
-
----
-
-## Clean Installation & Deployment Guide
-
-Follow these steps to deploy SIFT on a fresh machine:
-
-### 1. Clone the Repository
+### 1. Clone the repo
 ```bash
 git clone https://github.com/bharadwajsanket/SIFT.git
 cd SIFT
 ```
 
-### 2. Download the GGUF Model
-Download the official model binary from Hugging Face:
-- **Download Link**: [Qwen3-4B-Instruct-2507-Q4_K_M.gguf](https://huggingface.co/unsloth/Qwen3-4B-Instruct-2507-GGUF/blob/main/Qwen3-4B-Instruct-2507-Q4_K_M.gguf)
+### 2. Add the local AI model (Optional)
+If you want the offline AI Overview, grab the recommended Qwen3-4B GGUF model:
+- **Download**: [Qwen3-4B-Instruct-2507-Q4_K_M.gguf](https://huggingface.co/unsloth/Qwen3-4B-Instruct-2507-GGUF/blob/main/Qwen3-4B-Instruct-2507-Q4_K_M.gguf)
 
-Place the file into the `models/` directory:
+Drop it in `models/`:
 ```bash
-# Verify model placement
-ls -lh models/Qwen3-4B-Instruct-2507-Q4_K_M.gguf
+models/
+├── .gitkeep
+└── Qwen3-4B-Instruct-2507-Q4_K_M.gguf
 ```
+*(If you skip this step, SIFT works normally as a pure search engine—just without the AI Overview card).*
 
-### 3. Configure Environment Variables
+### 3. Setup environment variables
 ```bash
 cd searxng
 cp .env.example .env
 ```
 
-Review or adjust `searxng/.env` as needed:
-```bash
-# Generate a secret key for session encryption
-sed -i '' "s/change_this_to_a_secure_random_key_in_production/$(openssl rand -hex 32)/" .env
-```
-
-### 4. Start the Docker Stack
+### 4. Fire up the stack
 ```bash
 docker compose up -d --build
 ```
 
-### 5. Verify Running Containers
-```bash
-docker compose ps
-```
-All four containers (`sift-web`, `searxng-core`, `searxng-valkey`, `sift-llama-server`) should be in the `Up` state.
-
-### 6. Verify Local AI Backend
-```bash
-curl -s http://localhost:3000/api/ai
-```
-Expected output:
-```json
-{"enabled":true,"available":true,"model":"Qwen3-4B-Instruct-2507","status":"local"}
-```
-
-### 7. Open SIFT
-Open **[http://localhost:3000](http://localhost:3000)** (or your configured hostname `search.edith.local`) in your browser.
+### 5. Open SIFT
+Head to **[http://localhost:3000](http://localhost:3000)** in your browser.
 
 ---
 
-## Environment Variables Reference (`searxng/.env`)
+## Development
 
-| Variable | Default | Description |
-| :--- | :--- | :--- |
-| `SIFT_PORT` | `3000` | Port on which the SIFT Next.js web application is accessible on the host. |
-| `SEARXNG_PORT` | `8080` | Internal host-bound port for the SearXNG aggregation engine (`127.0.0.1:8080`). |
-| `SEARXNG_VERSION` | `2026.8.29-d226b78bc` | Pinned container tag for SearXNG metasearch. |
-| `SEARXNG_SECRET` | *(random key)* | 32-byte hex secret key for SearXNG session encryption. |
-| `SIFT_LLM_ENABLED` | `true` | Server-side capability flag for local AI Overview (`true` or `false`). |
-| `SIFT_LLM_URL` | `http://llama-server:8080` | Docker-internal URL for the llama.cpp HTTP server. |
-| `SIFT_LLM_MODEL` | `/models/Qwen3-4B-Instruct-2507-Q4_K_M.gguf` | Absolute path to the mounted GGUF model inside the container. |
-| `SIFT_LLM_THREADS` | `4` | Number of CPU inference threads allocated to llama.cpp (tuned for 4C/8T). |
-| `SIFT_LLM_CTX_SIZE` | `2048` | Prompt context size in tokens (conservative setting for fast CPU response). |
-| `SIFT_LLM_N_PREDICT` | `512` | Maximum generated tokens per answer. |
+If you want to work on the frontend locally:
+
+```bash
+cd frontend
+npm install
+npm run dev
+```
+
+To run lint checks and production builds:
+```bash
+npm run lint
+npm run build
+```
 
 ---
 
-## AI API Reference
+## Customization
 
-### Health & Status: `GET /api/ai`
-Checks whether the local AI backend is enabled and reachable.
+This is probably the part I spent way too much time tweaking.
 
-**Response**:
-```json
-{
-  "enabled": true,
-  "available": true,
-  "model": "Qwen3-4B-Instruct-2507",
-  "status": "local"
-}
-```
+Hit **`⌘ ,`** (or click the settings gear in the top right) to customize:
 
-### Streaming Inference: `POST /api/ai`
-Streams standalone direct answers from the local GGUF model. Supports optional conversational history for follow-up questions.
-
-**Request Payload**:
-```json
-{
-  "query": "linux command to zip a file",
-  "history": []
-}
-```
-
-**Stream Response (Plain Text Chunks)**:
-````markdown
-```bash
-zip archive.zip filename.txt
-```
-
-For a directory:
-```bash
-zip -r archive.zip directory/
-```
-````
-
-**Follow-Up Request with History**:
-```json
-{
-  "query": "what about extracting it?",
-  "history": [
-    { "role": "user", "content": "linux command to zip a file" },
-    { "role": "assistant", "content": "zip -r archive.zip folder/" }
-  ]
-}
-```
-
-**Follow-Up Stream Response**:
-````markdown
-unzip archive.zip -d extract_directory/
-````
+- **Visual Style**: Switch between `Glass` (translucent blur, reflections) and `Matte` (clean solid cards).
+- **Theme**: Dark, Light, or follow your System preferences.
+- **Wallpapers**: 5 built-in atmospheric SVGs, upload your own image (stored directly in your browser via IndexedDB), or paste an image URL.
+- **Atmosphere Sliders**: Dial in exact background opacity and backdrop blur levels.
+- **Home Canvas**:
+  - **Clock**: 12h/24h format and custom timezone (UTC, EST, PST, GMT, IST, JST, etc.).
+  - **Weather**: Custom city location powered by [Open-Meteo](https://open-meteo.com) (open-source, non-commercial, zero-tracking) with `°C` / `°F` toggle.
+  - **Pinned Shortcuts**: Add your favorite links; SIFT resolves favicons automatically.
+  - **Recent Searches**: Ephemeral local history with quick clear options.
+- **Search Behavior**: Tab opening behavior, safe search level, and default map provider (OpenStreetMap, Apple Maps, Google Maps, Photon).
+- **AI Overview Switch**: Instant client-side kill switch. When off, zero requests are sent to the model.
 
 ---
 
-## User Settings & Client-Side Persistence
+## Privacy & Security
 
-Open **Settings (⌘,)** in SIFT to customize your experience:
+A few straightforward details on how SIFT handles privacy:
 
-- **AI Overview `[ ON / OFF ]`**: Accessible toggle switch (`role="switch"`, `aria-checked`).
-  - **ON**: SIFT streams local answers above search results and offers a follow-up input bar.
-  - **OFF**: SIFT makes zero calls to `/api/ai`, renders no AI card or placeholder, and acts as a pure search engine.
-- **AI Status**: Live badge indicating backend connectivity (`Local` vs. `Offline`).
-- **Appearance & Wallpapers**: 5 curated atmospheric wallpapers, custom file upload to browser **IndexedDB**, custom image URLs, opacity/blur sliders, and accent palettes across Dark, Light, and System modes.
-
-*All user preferences remain strictly on the client device and are never sent to a database or server.*
-
----
-
-## Search Categories
-
-SIFT provides specialized presentation for 7 search categories:
-
-| Category | Description & Specialized Features |
-| :--- | :--- |
-| **Web** | Multi-engine consensus indicators, domain badges, instant result inspector, and timestamp formatting. |
-| **Images** | Natural masonry grid, resolution tags, full-screen lightbox with multi-image navigation (`←`/`→`), touch swipe, and safe image proxy downloads. |
-| **Videos** | Duration pills, channel/uploader metadata, domain badges, and media preview cards. |
-| **News** | Publication dates, news outlet attribution, thumbnail integration, and multi-source consensus. |
-| **Academic** | Authors list (`et al.`), journal/publisher tags, direct PDF badges, DOI links, and citation counts. |
-| **Code** | Package and repository names, star ratings, software license badges, homepage links, and topic tags. |
-| **Maps** | Coordinate badges, structured address summaries, and configurable map navigation (OpenStreetMap, Google Maps, Apple Maps, Photon). |
-
----
-
-## Privacy & Security Model
-
-- **No User Tracking**: Zero analytics, telemetry, tracking pixels, advertising, or session cookies.
-- **Local Search History**: Ephemeral recent searches stored strictly in `localStorage` with one-click deletion.
-- **Private Network Isolation**: `llama-server` and `searxng-core` ports are not exposed publicly to the LAN.
-- **HTML Sanitization**: Result titles and snippets are stripped of raw markup and rendered safely through React text nodes.
-- **SSRF Protection**: Image proxy strictly forbids loopback and RFC 1918 private IP ranges (`127.0.0.1`, `10.*`, `192.168.*`, `172.16-31.*`, `.local`, `.internal`).
-- **Protocol Filtering**: Remote URLs are validated against `http:` and `https:`, blocking unsafe protocols (e.g. `javascript:`).
-
----
-
-## Troubleshooting
-
-### 1. Docker is Not Running
-If running `docker compose` produces connection errors:
-```bash
-# Ensure Docker daemon / Docker Desktop is running, then retry:
-docker compose up -d
-```
-
-### 2. Inspecting Container Logs
-```bash
-# Check status of all services
-docker compose ps
-
-# View llama-server logs (model loading, inference timing)
-docker compose logs --tail=100 llama-server
-
-# View SIFT web frontend logs
-docker compose logs --tail=100 sift-web
-
-# View SearXNG engine logs
-docker compose logs --tail=100 core
-```
-
-### 3. AI Reports Unavailable (`Offline`)
-If the Settings panel shows `Offline` or `/api/ai` returns `status: "offline"`:
-1. Verify the model file exists at `models/Qwen3-4B-Instruct-2507-Q4_K_M.gguf`.
-2. Check if `llama-server` crashed due to memory limits with `docker compose logs llama-server`.
-3. Restart the service: `docker compose restart llama-server`.
-
-### 4. Testing AI Health & Inference Manually
-```bash
-# Test status probe
-curl -s http://localhost:3000/api/ai
-
-# Test streaming inference
-curl -s -X POST http://localhost:3000/api/ai \
-  -H "Content-Type: application/json" \
-  -d '{"query":"linux command to zip a file"}'
-```
-
-### 5. Normal Search Verification
-Verify that SearXNG metasearch is functioning independently:
-```bash
-curl -s "http://localhost:3000/api/search?q=test"
-```
+- **Zero Telemetry**: No Google Analytics, no PostHog, no tracking pixels, no telemetry endpoints.
+- **Network Isolation**: The AI and search engine backend containers only talk to the SIFT frontend over an internal Docker bridge. They are not exposed to the outside network.
+- **SSRF Protection**: The image proxy rejects private/local IP ranges (`127.0.0.1`, `10.*`, `192.168.*`, `172.16-31.*`, `.local`, `.internal`) so it cannot be used to scan internal networks.
+- **HTML Sanitization**: All snippets and titles coming back from search providers are stripped of raw markup and rendered safely through React text nodes.
+- **Local Storage Only**: Preferences, pinned shortcuts, and search history stay entirely in your browser.
 
 ---
 

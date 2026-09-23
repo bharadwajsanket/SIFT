@@ -163,8 +163,8 @@ function SearchController() {
           setResults(data.results || []);
           setResultCount(data.count || 0);
           setDuration(data.duration || '0.00');
-          // For non-image categories on desktop, default select the first result for inspector context if desired
-          if (data.results && data.results.length > 0 && category !== 'images' && typeof window !== 'undefined' && window.innerWidth > 960) {
+          // For document/text categories on desktop, default select the first result for inspector context
+          if (data.results && data.results.length > 0 && category !== 'images' && category !== 'videos' && typeof window !== 'undefined' && window.innerWidth > 960) {
             setSelectedResult(data.results[0]);
           }
         } else {
@@ -484,122 +484,135 @@ function SearchController() {
         isDismissed={isLocationDismissed}
       />
 
-      <main className={`${styles.mainLayout} ${!selectedResult || category === 'images' ? styles.singleColumnLayout : ''}`}>
-        <section className={styles.resultsArea}>
-          <AIOverview query={query} category={category} />
+      {(() => {
+        const isMediaCategory = category === 'images' || category === 'videos';
+        const showInspector = !isMediaCategory && Boolean(selectedResult);
 
-          {!loading && !error && results.length > 0 && (
-            <div className={styles.metricsRow}>
-              <span>{resultCount} results</span>
-              <span> ({duration}s)</span>
-            </div>
-          )}
-
-          {loading ? (
-            <div className={styles.skeletonList}>
-              {Array.from({ length: 5 }).map((_, i) => (
-                <div key={i} className={styles.skeletonCard}>
-                  <div className={styles.skeletonLine} style={{ width: '22%', height: '10px' }} />
-                  <div className={styles.skeletonLine} style={{ width: '65%', height: '18px' }} />
-                  <div className={styles.skeletonLine} style={{ width: '92%', height: '13px' }} />
-                  <div className={styles.skeletonLine} style={{ width: '80%', height: '13px' }} />
-                </div>
-              ))}
-            </div>
-          ) : error ? (
-            <div className={styles.errorBox}>
-              <h2 className={styles.errorTitle}>Aggregation Error</h2>
-              <p className={styles.errorMsg}>{error}</p>
-              <button type="button" className={styles.retryBtn} onClick={() => setQuery(query)}>
-                Retry Search
-              </button>
-            </div>
-          ) : results.length === 0 ? (
-            <div className={styles.errorBox}>
-              <h2 className={styles.errorTitle} style={{ color: 'var(--text)' }}>No Results Found</h2>
-              <p className={styles.errorMsg}>
-                No entries found for &quot;{query}&quot; in category &quot;{category}&quot;. Try broadening search terms or changing filters.
-              </p>
-            </div>
-          ) : (
-            <>
-              {category === 'images' && (
-                <ImageResults 
-                  results={results} 
-                  selectedResult={selectedResult}
-                  onSelectResult={(item) => setSelectedResult(item)}
-                  onOpenLightbox={handleOpenLightbox}
-                />
-              )}
-              {category === 'videos' && (
-                <VideoResults results={results} onSelectResult={setSelectedResult} />
-              )}
-              {category === 'news' && (
-                <NewsResults results={results} selectedResult={selectedResult} onSelectResult={setSelectedResult} />
-              )}
-              {category === 'code' && (
-                <CodeResults results={results} selectedResult={selectedResult} onSelectResult={setSelectedResult} />
-              )}
-              {category === 'academic' && (
-                <AcademicResults results={results} selectedResult={selectedResult} onSelectResult={setSelectedResult} />
-              )}
-              {category === 'maps' && (
-                <MapResults results={results} selectedResult={selectedResult} onSelectResult={setSelectedResult} />
-              )}
-              {category === 'all' && (
-                <WebResults results={results} selectedResult={selectedResult} onSelectResult={setSelectedResult} />
-              )}
-
-              <div className={styles.pagination}>
-                <button
-                  type="button"
-                  className={styles.pageBtn}
-                  onClick={() => {
-                    setPage((p) => Math.max(1, p - 1));
-                    window.scrollTo({ top: 0, behavior: 'smooth' });
-                  }}
-                  disabled={page === 1}
-                >
-                  <ArrowLeftIcon size={12} />
-                  <span>Previous</span>
-                </button>
-                
-                <span className={styles.pageNumber}>Page {page}</span>
-                
-                <button
-                  type="button"
-                  className={styles.pageBtn}
-                  onClick={() => {
-                    setPage((p) => p + 1);
-                    window.scrollTo({ top: 0, behavior: 'smooth' });
-                  }}
-                  disabled={results.length < 5}
-                >
-                  <span>Next</span>
-                  <ArrowRightIcon size={12} />
-                </button>
-              </div>
-            </>
-          )}
-        </section>
-
-        {!loading && selectedResult && category !== 'images' && (
-          <aside 
-            className={styles.sideColumn}
-            onClick={() => {
-              if (typeof window !== 'undefined' && window.innerWidth <= 960) {
-                setSelectedResult(null);
-              }
-            }}
+        return (
+          <main 
+            className={`
+              ${styles.mainLayout} 
+              ${isMediaCategory ? styles.mediaGridLayout : ''} 
+              ${!showInspector && !isMediaCategory ? styles.documentLayout : ''}
+            `.trim()}
           >
-            <ResultDetails 
-              result={selectedResult} 
-              onClose={() => setSelectedResult(null)} 
-              onOpenLightbox={(res) => handleOpenLightbox(res)}
-            />
-          </aside>
-        )}
-      </main>
+            <section className={styles.resultsArea}>
+              <AIOverview query={query} category={category} />
+
+              {!loading && !error && results.length > 0 && (
+                <div className={styles.metricsRow}>
+                  <span>{resultCount} results</span>
+                  <span> ({duration}s)</span>
+                </div>
+              )}
+
+              {loading ? (
+                <div className={styles.skeletonList}>
+                  {Array.from({ length: 5 }).map((_, i) => (
+                    <div key={i} className={styles.skeletonCard}>
+                      <div className={styles.skeletonLine} style={{ width: '22%', height: '10px' }} />
+                      <div className={styles.skeletonLine} style={{ width: '65%', height: '18px' }} />
+                      <div className={styles.skeletonLine} style={{ width: '92%', height: '13px' }} />
+                      <div className={styles.skeletonLine} style={{ width: '80%', height: '13px' }} />
+                    </div>
+                  ))}
+                </div>
+              ) : error ? (
+                <div className={styles.errorBox}>
+                  <h2 className={styles.errorTitle}>Aggregation Error</h2>
+                  <p className={styles.errorMsg}>{error}</p>
+                  <button type="button" className={styles.retryBtn} onClick={() => setQuery(query)}>
+                    Retry Search
+                  </button>
+                </div>
+              ) : results.length === 0 ? (
+                <div className={styles.errorBox}>
+                  <h2 className={styles.errorTitle} style={{ color: 'var(--text)' }}>No Results Found</h2>
+                  <p className={styles.errorMsg}>
+                    No entries found for &quot;{query}&quot; in category &quot;{category}&quot;. Try broadening search terms or changing filters.
+                  </p>
+                </div>
+              ) : (
+                <>
+                  {category === 'images' && (
+                    <ImageResults 
+                      results={results} 
+                      selectedResult={selectedResult}
+                      onSelectResult={(item) => setSelectedResult(item)}
+                      onOpenLightbox={handleOpenLightbox}
+                    />
+                  )}
+                  {category === 'videos' && (
+                    <VideoResults results={results} onSelectResult={setSelectedResult} />
+                  )}
+                  {category === 'news' && (
+                    <NewsResults results={results} selectedResult={selectedResult} onSelectResult={setSelectedResult} />
+                  )}
+                  {category === 'code' && (
+                    <CodeResults results={results} selectedResult={selectedResult} onSelectResult={setSelectedResult} />
+                  )}
+                  {category === 'academic' && (
+                    <AcademicResults results={results} selectedResult={selectedResult} onSelectResult={setSelectedResult} />
+                  )}
+                  {category === 'maps' && (
+                    <MapResults results={results} selectedResult={selectedResult} onSelectResult={setSelectedResult} />
+                  )}
+                  {category === 'all' && (
+                    <WebResults results={results} selectedResult={selectedResult} onSelectResult={setSelectedResult} />
+                  )}
+
+                  <div className={styles.pagination}>
+                    <button
+                      type="button"
+                      className={styles.pageBtn}
+                      onClick={() => {
+                        setPage((p) => Math.max(1, p - 1));
+                        window.scrollTo({ top: 0, behavior: 'smooth' });
+                      }}
+                      disabled={page === 1}
+                    >
+                      <ArrowLeftIcon size={12} />
+                      <span>Previous</span>
+                    </button>
+                    
+                    <span className={styles.pageNumber}>Page {page}</span>
+                    
+                    <button
+                      type="button"
+                      className={styles.pageBtn}
+                      onClick={() => {
+                        setPage((p) => p + 1);
+                        window.scrollTo({ top: 0, behavior: 'smooth' });
+                      }}
+                      disabled={results.length < 5}
+                    >
+                      <span>Next</span>
+                      <ArrowRightIcon size={12} />
+                    </button>
+                  </div>
+                </>
+              )}
+            </section>
+
+            {!loading && selectedResult && !isMediaCategory && (
+              <aside 
+                className={styles.sideColumn}
+                onClick={() => {
+                  if (typeof window !== 'undefined' && window.innerWidth <= 960) {
+                    setSelectedResult(null);
+                  }
+                }}
+              >
+                <ResultDetails 
+                  result={selectedResult} 
+                  onClose={() => setSelectedResult(null)} 
+                  onOpenLightbox={(res) => handleOpenLightbox(res)}
+                />
+              </aside>
+            )}
+          </main>
+        );
+      })()}
 
       <ImageLightbox 
         result={lightboxResult} 

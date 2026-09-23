@@ -1,4 +1,5 @@
 export type ThemeMode = 'dark' | 'light' | 'system';
+export type VisualStyle = 'glass' | 'matte';
 export type DensityMode = 'compact' | 'comfortable' | 'spacious';
 export type MotionMode = 'full' | 'reduced' | 'off';
 export type WallpaperSource = 'official' | 'upload' | 'url';
@@ -11,9 +12,12 @@ export interface SiftWallpaper {
   url: string;
   thumbnail: string;
   defaultAccent: string;
+  theme: 'dark' | 'light';
+  pairedId?: string;
 }
 
 export const OFFICIAL_WALLPAPERS: SiftWallpaper[] = [
+  // Dark Collection
   {
     id: 'mountain',
     title: 'Alpine Moon',
@@ -21,6 +25,8 @@ export const OFFICIAL_WALLPAPERS: SiftWallpaper[] = [
     url: '/wallpapers/sift-mountain.jpg',
     thumbnail: '/wallpapers/sift-mountain.jpg',
     defaultAccent: '#a78bfa', // Lavender
+    theme: 'dark',
+    pairedId: 'mountain-light',
   },
   {
     id: 'mist',
@@ -29,6 +35,8 @@ export const OFFICIAL_WALLPAPERS: SiftWallpaper[] = [
     url: '/wallpapers/sift-mist.jpg',
     thumbnail: '/wallpapers/sift-mist.jpg',
     defaultAccent: '#c084fc', // Violet
+    theme: 'dark',
+    pairedId: 'mist-light',
   },
   {
     id: 'obsidian',
@@ -37,6 +45,8 @@ export const OFFICIAL_WALLPAPERS: SiftWallpaper[] = [
     url: '/wallpapers/sift-obsidian.jpg',
     thumbnail: '/wallpapers/sift-obsidian.jpg',
     defaultAccent: '#818cf8', // Indigo
+    theme: 'dark',
+    pairedId: 'obsidian-light',
   },
   {
     id: 'twilight',
@@ -45,6 +55,8 @@ export const OFFICIAL_WALLPAPERS: SiftWallpaper[] = [
     url: '/wallpapers/sift-twilight.jpg',
     thumbnail: '/wallpapers/sift-twilight.jpg',
     defaultAccent: '#f472b6', // Twilight Rose
+    theme: 'dark',
+    pairedId: 'twilight-light',
   },
   {
     id: 'celestial',
@@ -53,6 +65,60 @@ export const OFFICIAL_WALLPAPERS: SiftWallpaper[] = [
     url: '/wallpapers/sift-celestial.jpg',
     thumbnail: '/wallpapers/sift-celestial.jpg',
     defaultAccent: '#38bdf8', // Cyan Aurora
+    theme: 'dark',
+    pairedId: 'celestial-light',
+  },
+
+  // Dedicated Light Collection
+  {
+    id: 'mountain-light',
+    title: 'Alpine Dawn',
+    subtitle: 'Morning Sunlight & Mist',
+    url: '/wallpapers/sift-mountain-light.svg',
+    thumbnail: '/wallpapers/sift-mountain-light.svg',
+    defaultAccent: '#7c3aed', // Purple Violet
+    theme: 'light',
+    pairedId: 'mountain',
+  },
+  {
+    id: 'mist-light',
+    title: 'Morning Mist',
+    subtitle: 'Daylight Lake Reflection',
+    url: '/wallpapers/sift-mist-light.svg',
+    thumbnail: '/wallpapers/sift-mist-light.svg',
+    defaultAccent: '#6366f1', // Indigo Dawn
+    theme: 'light',
+    pairedId: 'mist',
+  },
+  {
+    id: 'obsidian-light',
+    title: 'Ivory Peaks',
+    subtitle: 'Clear Daylight Sky & Ridge',
+    url: '/wallpapers/sift-obsidian-light.svg',
+    thumbnail: '/wallpapers/sift-obsidian-light.svg',
+    defaultAccent: '#4f46e5', // Royal Indigo
+    theme: 'light',
+    pairedId: 'obsidian',
+  },
+  {
+    id: 'twilight-light',
+    title: 'Pastel Ridge',
+    subtitle: 'Soft Rose & Lavender Valley',
+    url: '/wallpapers/sift-twilight-light.svg',
+    thumbnail: '/wallpapers/sift-twilight-light.svg',
+    defaultAccent: '#c026d3', // Magenta Bloom
+    theme: 'light',
+    pairedId: 'twilight',
+  },
+  {
+    id: 'celestial-light',
+    title: 'Azure Horizon',
+    subtitle: 'Pure Cyan Daylight Atmospheric',
+    url: '/wallpapers/sift-celestial-light.svg',
+    thumbnail: '/wallpapers/sift-celestial-light.svg',
+    defaultAccent: '#0284c7', // Sky Azure
+    theme: 'light',
+    pairedId: 'celestial',
   },
 ];
 
@@ -82,6 +148,7 @@ export const CURATED_ACCENTS: CuratedAccent[] = [
 export interface SiftAppearanceConfig {
   version: number;
   theme: ThemeMode;
+  visualStyle: VisualStyle;
   density: DensityMode;
   motion: MotionMode;
   
@@ -114,6 +181,7 @@ export const APPEARANCE_STORAGE_KEY = 'sift_appearance_v1';
 export const DEFAULT_APPEARANCE_CONFIG: SiftAppearanceConfig = {
   version: APPEARANCE_CONFIG_VERSION,
   theme: 'dark',
+  visualStyle: 'glass',
   density: 'comfortable',
   motion: 'full',
   
@@ -151,6 +219,7 @@ export function sanitizeAppearanceConfig(raw: any): SiftAppearanceConfig {
   }
 
   const theme: ThemeMode = ['dark', 'light', 'system'].includes(raw.theme) ? raw.theme : DEFAULT_APPEARANCE_CONFIG.theme;
+  const visualStyle: VisualStyle = ['glass', 'matte'].includes(raw.visualStyle) ? raw.visualStyle : DEFAULT_APPEARANCE_CONFIG.visualStyle;
   const density: DensityMode = ['compact', 'comfortable', 'spacious'].includes(raw.density) ? raw.density : DEFAULT_APPEARANCE_CONFIG.density;
   const motion: MotionMode = ['full', 'reduced', 'off'].includes(raw.motion) ? raw.motion : DEFAULT_APPEARANCE_CONFIG.motion;
   const wallpaperSource: WallpaperSource = ['official', 'upload', 'url'].includes(raw.wallpaperSource) ? raw.wallpaperSource : DEFAULT_APPEARANCE_CONFIG.wallpaperSource;
@@ -162,6 +231,7 @@ export function sanitizeAppearanceConfig(raw: any): SiftAppearanceConfig {
   return {
     version: APPEARANCE_CONFIG_VERSION,
     theme,
+    visualStyle,
     density,
     motion,
     wallpaperSource,
@@ -186,32 +256,50 @@ export function sanitizeAppearanceConfig(raw: any): SiftAppearanceConfig {
 }
 
 /**
- * Resolves the effective wallpaper URL and accent color
+ * Resolves the effective wallpaper URL, accent color, and wallpaper object with light/dark pairing
  */
 export function resolveAppearanceState(
   config: SiftAppearanceConfig,
   uploadedUrl: string | null
-): { wallpaperUrl: string; accentColor: string } {
+): { wallpaperUrl: string; accentColor: string; effectiveTheme: 'dark' | 'light' } {
+  let effectiveTheme: 'dark' | 'light' = 'dark';
+  if (config.theme === 'light') {
+    effectiveTheme = 'light';
+  } else if (config.theme === 'system' && typeof window !== 'undefined') {
+    const isDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+    effectiveTheme = isDark ? 'dark' : 'light';
+  }
+
   let wallpaperUrl = OFFICIAL_WALLPAPERS[0].url;
   let autoAccent = OFFICIAL_WALLPAPERS[0].defaultAccent;
 
   if (config.wallpaperSource === 'upload' && uploadedUrl) {
     wallpaperUrl = uploadedUrl;
-    autoAccent = '#a78bfa';
+    autoAccent = effectiveTheme === 'light' ? '#7c3aed' : '#a78bfa';
   } else if (config.wallpaperSource === 'url' && config.wallpaperCustomUrl.trim()) {
     wallpaperUrl = config.wallpaperCustomUrl.trim();
-    autoAccent = '#a78bfa';
+    autoAccent = effectiveTheme === 'light' ? '#7c3aed' : '#a78bfa';
   } else {
-    const found = OFFICIAL_WALLPAPERS.find((w) => w.id === config.wallpaperId);
-    if (found) {
-      wallpaperUrl = found.url;
-      autoAccent = found.defaultAccent;
+    // Look up selected wallpaper in official list
+    const found = OFFICIAL_WALLPAPERS.find((w) => w.id === config.wallpaperId) || OFFICIAL_WALLPAPERS[0];
+    
+    // Dynamic Light / Dark Wallpaper Pairing resolution
+    let resolvedWallpaper = found;
+    if (effectiveTheme === 'light' && found.theme === 'dark' && found.pairedId) {
+      const pairedLight = OFFICIAL_WALLPAPERS.find((w) => w.id === found.pairedId);
+      if (pairedLight) resolvedWallpaper = pairedLight;
+    } else if (effectiveTheme === 'dark' && found.theme === 'light' && found.pairedId) {
+      const pairedDark = OFFICIAL_WALLPAPERS.find((w) => w.id === found.pairedId);
+      if (pairedDark) resolvedWallpaper = pairedDark;
     }
+
+    wallpaperUrl = resolvedWallpaper.url;
+    autoAccent = resolvedWallpaper.defaultAccent;
   }
 
   const accentColor = config.accentMode === 'auto' ? autoAccent : config.accentColor;
 
-  return { wallpaperUrl, accentColor };
+  return { wallpaperUrl, accentColor, effectiveTheme };
 }
 
 /**
@@ -233,6 +321,7 @@ export function applyAppearanceToDOM(
     effectiveTheme = isDark ? 'dark' : 'light';
   }
   root.setAttribute('data-theme', effectiveTheme);
+  root.setAttribute('data-visual-style', config.visualStyle);
   root.setAttribute('data-density', config.density);
   root.setAttribute('data-motion', config.motion);
 
@@ -243,32 +332,61 @@ export function applyAppearanceToDOM(
   root.style.setProperty('--bg-wallpaper-scale', `${config.wallpaperScale}`);
   root.style.setProperty('--bg-wallpaper-position', config.wallpaperPosition);
 
-  // Overlay Darkness
+  // Overlay Darkness & Readability Gradients
   const darkVal = config.overlayDarkness;
-  root.style.setProperty('--overlay-scrim', `rgba(8, 7, 15, ${darkVal})`);
-  root.style.setProperty(
-    '--overlay-gradient',
-    `linear-gradient(180deg, rgba(9, 10, 16, ${Math.max(0, darkVal - 0.2)}) 0%, rgba(9, 10, 16, ${darkVal}) 45%, rgba(8, 7, 15, ${Math.min(1, darkVal + 0.35)}) 100%)`
-  );
-
-  // Glass Material Tokens
   if (effectiveTheme === 'dark') {
-    root.style.setProperty('--glass-surface', `rgba(18, 16, 28, ${config.glassOpacity})`);
-    root.style.setProperty('--glass-surface-hover', `rgba(26, 22, 40, ${Math.min(0.98, config.glassOpacity + 0.14)})`);
-    root.style.setProperty('--glass-surface-active', `rgba(35, 30, 54, ${Math.min(1, config.glassOpacity + 0.24)})`);
-    root.style.setProperty('--glass-border', `rgba(255, 255, 255, ${(0.08 * config.borderIntensity).toFixed(3)})`);
-    root.style.setProperty('--glass-border-strong', `rgba(255, 255, 255, ${(0.14 * config.borderIntensity).toFixed(3)})`);
-    root.style.setProperty('--glass-border-subtle', `rgba(255, 255, 255, ${(0.05 * config.borderIntensity).toFixed(3)})`);
+    root.style.setProperty('--overlay-scrim', `rgba(8, 7, 15, ${darkVal})`);
+    root.style.setProperty(
+      '--overlay-gradient',
+      `linear-gradient(180deg, rgba(9, 10, 16, ${Math.max(0, darkVal - 0.2)}) 0%, rgba(9, 10, 16, ${darkVal}) 45%, rgba(8, 7, 15, ${Math.min(1, darkVal + 0.35)}) 100%)`
+    );
   } else {
-    root.style.setProperty('--glass-surface', `rgba(255, 255, 255, ${Math.min(0.95, config.glassOpacity + 0.2)})`);
-    root.style.setProperty('--glass-surface-hover', `rgba(255, 255, 255, ${Math.min(1, config.glassOpacity + 0.3)})`);
-    root.style.setProperty('--glass-surface-active', `#ffffff`);
-    root.style.setProperty('--glass-border', `rgba(0, 0, 0, ${(0.08 * config.borderIntensity).toFixed(3)})`);
-    root.style.setProperty('--glass-border-strong', `rgba(0, 0, 0, ${(0.14 * config.borderIntensity).toFixed(3)})`);
-    root.style.setProperty('--glass-border-subtle', `rgba(0, 0, 0, ${(0.04 * config.borderIntensity).toFixed(3)})`);
+    // Light Mode Daylight Scrim
+    root.style.setProperty('--overlay-scrim', `rgba(245, 247, 252, ${Math.min(0.85, darkVal + 0.1)})`);
+    root.style.setProperty(
+      '--overlay-gradient',
+      `linear-gradient(180deg, rgba(255, 255, 255, ${Math.max(0, darkVal - 0.25)}) 0%, rgba(248, 250, 252, ${darkVal}) 50%, rgba(241, 245, 249, ${Math.min(0.98, darkVal + 0.3)}) 100%)`
+    );
   }
 
-  root.style.setProperty('--glass-blur', `${config.glassBlur}px`);
+  // Glass / Matte Material Tokens
+  if (config.visualStyle === 'matte') {
+    if (effectiveTheme === 'dark') {
+      root.style.setProperty('--glass-surface', '#14151e');
+      root.style.setProperty('--glass-surface-hover', '#1c1e2a');
+      root.style.setProperty('--glass-surface-active', '#242738');
+      root.style.setProperty('--glass-surface-subtle', '#101118');
+      root.style.setProperty('--glass-border', 'rgba(255, 255, 255, 0.08)');
+      root.style.setProperty('--glass-border-strong', 'rgba(255, 255, 255, 0.14)');
+      root.style.setProperty('--glass-border-subtle', 'rgba(255, 255, 255, 0.04)');
+    } else {
+      root.style.setProperty('--glass-surface', '#ffffff');
+      root.style.setProperty('--glass-surface-hover', '#f8fafc');
+      root.style.setProperty('--glass-surface-active', '#f1f5f9');
+      root.style.setProperty('--glass-surface-subtle', '#f1f5f9');
+      root.style.setProperty('--glass-border', '#e2e8f0');
+      root.style.setProperty('--glass-border-strong', '#cbd5e1');
+      root.style.setProperty('--glass-border-subtle', '#f1f5f9');
+    }
+    root.style.setProperty('--glass-blur', '0px');
+  } else {
+    if (effectiveTheme === 'dark') {
+      root.style.setProperty('--glass-surface', `rgba(18, 16, 28, ${config.glassOpacity})`);
+      root.style.setProperty('--glass-surface-hover', `rgba(26, 22, 40, ${Math.min(0.98, config.glassOpacity + 0.14)})`);
+      root.style.setProperty('--glass-surface-active', `rgba(35, 30, 54, ${Math.min(1, config.glassOpacity + 0.24)})`);
+      root.style.setProperty('--glass-border', `rgba(255, 255, 255, ${(0.08 * config.borderIntensity).toFixed(3)})`);
+      root.style.setProperty('--glass-border-strong', `rgba(255, 255, 255, ${(0.14 * config.borderIntensity).toFixed(3)})`);
+      root.style.setProperty('--glass-border-subtle', `rgba(255, 255, 255, ${(0.05 * config.borderIntensity).toFixed(3)})`);
+    } else {
+      root.style.setProperty('--glass-surface', `rgba(255, 255, 255, ${Math.min(0.95, config.glassOpacity + 0.2)})`);
+      root.style.setProperty('--glass-surface-hover', `rgba(255, 255, 255, ${Math.min(1, config.glassOpacity + 0.3)})`);
+      root.style.setProperty('--glass-surface-active', `#ffffff`);
+      root.style.setProperty('--glass-border', `rgba(0, 0, 0, ${(0.08 * config.borderIntensity).toFixed(3)})`);
+      root.style.setProperty('--glass-border-strong', `rgba(0, 0, 0, ${(0.14 * config.borderIntensity).toFixed(3)})`);
+      root.style.setProperty('--glass-border-subtle', `rgba(0, 0, 0, ${(0.04 * config.borderIntensity).toFixed(3)})`);
+    }
+    root.style.setProperty('--glass-blur', `${config.glassBlur}px`);
+  }
   root.style.setProperty('--glass-border-focus', `${accentColor}88`);
 
   // Accent Tokens

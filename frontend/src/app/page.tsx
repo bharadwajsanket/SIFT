@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useRef, useTransition } from 'react';
+import React, { useState, useEffect, useRef, useTransition, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { SiftLogo } from '@/components/SiftLogo';
 import { 
@@ -14,10 +14,19 @@ import {
   CodeIcon, 
   AcademicIcon, 
   MapIcon,
-  ClockIcon,
   LayersIcon
 } from '@/components/icons';
 import { SettingsPanel } from '@/components/SettingsPanel';
+import { 
+  SiftHomeConfig, 
+  DEFAULT_HOME_CONFIG, 
+  loadHomeConfig, 
+  HomeZone 
+} from '@/lib/homeModules';
+import { HomeClock } from '@/components/home/HomeClock';
+import { HomeWeather } from '@/components/home/HomeWeather';
+import { HomeRecentSearches } from '@/components/home/HomeRecentSearches';
+import { HomeShortcuts } from '@/components/home/HomeShortcuts';
 import styles from './page.module.css';
 
 const CATEGORIES = [
@@ -39,13 +48,14 @@ export default function Home() {
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [recentSearches, setRecentSearches] = useState<string[]>([]);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [homeConfig, setHomeConfig] = useState<SiftHomeConfig>(DEFAULT_HOME_CONFIG);
   const [isPending, startTransition] = useTransition();
 
   const searchInputRef = useRef<HTMLInputElement>(null);
   const searchBoxRef = useRef<HTMLDivElement>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
 
-  // Load history from localStorage
+  // Load history & home modules config
   useEffect(() => {
     if (typeof window !== 'undefined') {
       try {
@@ -56,7 +66,17 @@ export default function Home() {
       } catch (e) {
         console.error('Failed to load recent searches:', e);
       }
+      setHomeConfig(loadHomeConfig());
     }
+
+    const handleConfigUpdate = (e: any) => {
+      if (e.detail) {
+        setHomeConfig(e.detail);
+      }
+    };
+
+    window.addEventListener('sift-home-config-updated', handleConfigUpdate);
+    return () => window.removeEventListener('sift-home-config-updated', handleConfigUpdate);
   }, []);
 
   const saveRecentSearch = (searchQuery: string) => {
@@ -65,22 +85,23 @@ export default function Home() {
     const updated = [
       trimmed,
       ...recentSearches.filter((q) => q.toLowerCase() !== trimmed.toLowerCase()),
-    ].slice(0, 6);
+    ].slice(0, 8);
     setRecentSearches(updated);
     localStorage.setItem('sift-recent-searches', JSON.stringify(updated));
   };
 
-  const clearAllHistory = () => {
+  const clearAllHistory = useCallback(() => {
     setRecentSearches([]);
     localStorage.removeItem('sift-recent-searches');
-  };
+  }, []);
 
-  const deleteRecentSearch = (e: React.MouseEvent, qToDelete: string) => {
-    e.stopPropagation();
-    const updated = recentSearches.filter((q) => q !== qToDelete);
-    setRecentSearches(updated);
-    localStorage.setItem('sift-recent-searches', JSON.stringify(updated));
-  };
+  const deleteRecentSearch = useCallback((qToDelete: string) => {
+    setRecentSearches((prev) => {
+      const updated = prev.filter((q) => q !== qToDelete);
+      localStorage.setItem('sift-recent-searches', JSON.stringify(updated));
+      return updated;
+    });
+  }, []);
 
   // Global keyboard shortcut listener for '⌘K', 'Ctrl+K', '/', and 'Escape'
   useEffect(() => {
@@ -188,13 +209,86 @@ export default function Home() {
     }
   };
 
+  // Helper to render individual modules by ID
+  const renderModule = (moduleId: string) => {
+    switch (moduleId) {
+      case 'clock':
+        return (
+          <HomeClock
+            key="clock"
+            showDate={homeConfig.modules.clock.showDate}
+            showSeconds={homeConfig.modules.clock.showSeconds}
+            timezone={homeConfig.modules.clock.timezone}
+            hourFormat={homeConfig.modules.clock.hourFormat}
+          />
+        );
+      case 'weather':
+        return (
+          <HomeWeather
+            key="weather"
+            unit={homeConfig.modules.weather.unit}
+            city={homeConfig.modules.weather.city}
+          />
+        );
+      case 'recentSearches':
+        return (
+          <HomeRecentSearches
+            key="recentSearches"
+            searches={recentSearches}
+            onSelectSearch={(item) => {
+              setQuery(item);
+              executeSearch(item);
+            }}
+            onDeleteSearch={deleteRecentSearch}
+            onClearAll={clearAllHistory}
+            maxItems={homeConfig.modules.recentSearches.maxItems}
+          />
+        );
+      case 'shortcuts':
+        return <HomeShortcuts key="shortcuts" items={homeConfig.modules.shortcuts.items} />;
+      default:
+        return null;
+    }
+  };
+
+  // Helper to extract modules assigned to a specific spatial zone
+  const getZoneModules = (zone: HomeZone) => {
+    const result: string[] = [];
+    (Object.keys(homeConfig.modules) as Array<keyof typeof homeConfig.modules>).forEach((modKey) => {
+      const mod = homeConfig.modules[modKey];
+      if (mod.enabled && mod.zone === zone) {
+        result.push(modKey);
+      }
+    });
+    return result;
+  };
+
+  const topLeftMods = getZoneModules('top-left');
+  const topRightMods = getZoneModules('top-right');
+  const bottomLeftMods = getZoneModules('bottom-left');
+  const bottomRightMods = getZoneModules('bottom-right');
+
+  // Mobile dedicated ambient capsule: Clock & Weather in a single sleek horizontal pill
+  const isClockEnabled = homeConfig.modules.clock.enabled;
+  const isWeatherEnabled = homeConfig.modules.weather.enabled;
+  const hasMobileTopPill = isClockEnabled || isWeatherEnabled;
+
+  const mobileBottomMods: string[] = [];
+  if (homeConfig.modules.shortcuts.enabled) mobileBottomMods.push('shortcuts');
+  if (homeConfig.modules.recentSearches.enabled) mobileBottomMods.push('recentSearches');
+
+  // Check if any bottom modules exist (for fallback row display)
+  const hasBottomModules = bottomLeftMods.length > 0 || bottomRightMods.length > 0;
+
   return (
     <div className={styles.pageContainer}>
+      {/* Top Bar with Brand & Settings Toggle */}
       <header className={styles.topBar}>
         <div className={styles.topBrand}>
           <span className={styles.brandTitle}>SIFT</span>
           <span className={styles.brandSubtitle}>SEARCH WORKSTATION</span>
         </div>
+        
         <button 
           type="button" 
           className={styles.settingsIconBtn} 
@@ -206,182 +300,212 @@ export default function Home() {
         </button>
       </header>
 
-      <main className={styles.mainSection}>
-        <div className={styles.heroBrand}>
-          <div className={styles.logoWrapper}>
-            <SiftLogo 
-              markSize={52} 
-              orientation="vertical" 
-              showTagline 
-              variant="lavender" 
-            />
-          </div>
-        </div>
-
-        <div className={styles.searchBox} ref={searchBoxRef}>
-          <form 
-            className={styles.searchForm}
-            onSubmit={(e) => {
-              e.preventDefault();
-              executeSearch(query);
-            }}
-          >
-            <div className={styles.inputGroup}>
-              <SearchIcon size={18} className={styles.searchIcon} />
-              
-              <input
-                ref={searchInputRef}
-                type="text"
-                className={styles.mainInput}
-                placeholder="Search anything..."
-                value={query}
-                onChange={(e) => {
-                  setQuery(e.target.value);
-                  setShowSuggestions(true);
-                  setActiveSuggestion(-1);
-                }}
-                onKeyDown={handleInputKeyDown}
-                onFocus={() => setShowSuggestions(true)}
-                autoFocus
-                autoComplete="off"
-                spellCheck="false"
-              />
-
-              {query && (
-                <button 
-                  type="button" 
-                  className={styles.clearBtn}
-                  onClick={() => {
-                    setQuery('');
-                    setSuggestions([]);
-                    searchInputRef.current?.focus();
-                  }}
-                  aria-label="Clear search query"
-                >
-                  <CloseIcon size={14} />
-                </button>
-              )}
-
-              <div className={styles.keyboardHint} aria-hidden="true">
-                <span>⌘K</span>
-              </div>
-
-              <button 
-                type="submit" 
-                className={styles.searchSubmitAction}
-                disabled={isPending}
-                aria-label="Execute search"
-              >
-                <SearchIcon size={16} />
-              </button>
-            </div>
-          </form>
-
-          {showSuggestions && suggestions.length > 0 && (
-            <ul className={styles.suggestionsDropdown} role="listbox">
-              {suggestions.map((item, idx) => (
-                <li
-                  key={item}
-                  role="option"
-                  aria-selected={idx === activeSuggestion}
-                  className={`${styles.suggestionRow} ${idx === activeSuggestion ? styles.suggestionRowActive : ''}`}
-                  onClick={() => {
-                    setQuery(item);
-                    setShowSuggestions(false);
-                    executeSearch(item);
-                  }}
-                >
-                  <SearchIcon size={14} className={styles.suggestionIcon} />
-                  <span>{item}</span>
-                </li>
-              ))}
-            </ul>
-          )}
-        </div>
-
-        <nav className={styles.categoryNav} aria-label="Search categories">
-          {CATEGORIES.map((cat) => {
-            const Icon = cat.icon;
-            const isActive = selectedCategory === cat.id;
-            return (
-              <button
-                key={cat.id}
-                type="button"
-                className={`${styles.categoryTab} ${isActive ? styles.categoryTabActive : ''}`}
-                onClick={() => {
-                  setSelectedCategory(cat.id);
-                  if (query.trim()) {
-                    executeSearch(query, cat.id);
-                  }
-                }}
-              >
-                <Icon size={14} />
-                <span>{cat.label}</span>
-              </button>
-            );
-          })}
-        </nav>
-
-        {recentSearches.length > 0 ? (
-          <div className={styles.recentSection}>
-            <div className={styles.recentHeader}>
-              <div className={styles.recentTitleGroup}>
-                <ClockIcon size={12} />
-                <span className={styles.recentTitle}>RECENT SEARCHES</span>
-              </div>
-              <button 
-                type="button" 
-                className={styles.clearHistoryBtn}
-                onClick={clearAllHistory}
-              >
-                Clear all
-              </button>
-            </div>
-
-            <div className={styles.recentGrid}>
-              {recentSearches.slice(0, 6).map((item) => (
-                <div 
-                  key={item} 
-                  className={styles.recentChip}
-                  onClick={() => {
-                    setQuery(item);
-                    executeSearch(item);
-                  }}
-                  role="button"
-                  tabIndex={0}
-                >
-                  <span className={styles.recentChipText}>{item}</span>
-                  <button
-                    type="button"
-                    className={styles.recentChipDeleteBtn}
-                    onClick={(e) => deleteRecentSearch(e, item)}
-                    aria-label={`Remove ${item} from history`}
-                  >
-                    <CloseIcon size={11} />
-                  </button>
-                </div>
-              ))}
-            </div>
-          </div>
-        ) : (
-          <div className={styles.statusPillsRow}>
-            <div className={styles.statusPill}>
-              <span className={styles.statusDot} />
-              <span>LOCAL INSTANCE</span>
-            </div>
-            <div className={styles.statusDivider}>•</div>
-            <div className={styles.statusPill}>
-              <LayersIcon size={11} />
-              <span>MULTI-ENGINE AGGREGATE</span>
-            </div>
-            <div className={styles.statusDivider}>•</div>
-            <div className={styles.statusPill}>
-              <span>ZERO TELEMETRY</span>
-            </div>
-          </div>
+      {/* Spatial Canvas Container (Desktop Corner Anchors + Responsive Flow) */}
+      <div className={styles.spatialCanvas}>
+        
+        {/* Top-Left Peripheral Zone (Desktop) */}
+        {topLeftMods.length > 0 && (
+          <aside className={`${styles.spatialZone} ${styles.zoneTopLeft}`} aria-label="Top Left Module Zone">
+            {topLeftMods.map(renderModule)}
+          </aside>
         )}
-      </main>
 
+        {/* Top-Right Peripheral Zone (Desktop) */}
+        {topRightMods.length > 0 && (
+          <aside className={`${styles.spatialZone} ${styles.zoneTopRight}`} aria-label="Top Right Module Zone">
+            {topRightMods.map(renderModule)}
+          </aside>
+        )}
+
+        {/* Central Search Epicenter */}
+        <main className={styles.mainSection}>
+
+          {/* Mobile Top Ambient Capsule (Single Horizontal Line Pill for Clock & Weather) */}
+          {hasMobileTopPill && (
+            <div className={styles.mobileAmbientCapsuleRow}>
+              <div className={styles.ambientCapsule}>
+                {isClockEnabled && (
+                  <HomeClock
+                    showDate={homeConfig.modules.clock.showDate}
+                    showSeconds={false}
+                    timezone={homeConfig.modules.clock.timezone}
+                    hourFormat={homeConfig.modules.clock.hourFormat}
+                    compact
+                  />
+                )}
+                {isClockEnabled && isWeatherEnabled && (
+                  <span className={styles.ambientPillDivider}>•</span>
+                )}
+                {isWeatherEnabled && (
+                  <HomeWeather
+                    unit={homeConfig.modules.weather.unit}
+                    city={homeConfig.modules.weather.city}
+                    compact
+                  />
+                )}
+              </div>
+            </div>
+          )}
+
+          <div className={styles.heroBrand}>
+            <div className={styles.logoWrapper}>
+              <SiftLogo 
+                markSize={52} 
+                orientation="vertical" 
+                showTagline 
+                variant="lavender" 
+              />
+            </div>
+          </div>
+
+          <div className={styles.searchBox} ref={searchBoxRef}>
+            <form 
+              className={styles.searchForm}
+              onSubmit={(e) => {
+                e.preventDefault();
+                executeSearch(query);
+              }}
+            >
+              <div className={styles.inputGroup}>
+                <SearchIcon size={18} className={styles.searchIcon} />
+                
+                <input
+                  ref={searchInputRef}
+                  type="text"
+                  className={styles.mainInput}
+                  placeholder="Search anything..."
+                  value={query}
+                  onChange={(e) => {
+                    setQuery(e.target.value);
+                    setShowSuggestions(true);
+                    setActiveSuggestion(-1);
+                  }}
+                  onKeyDown={handleInputKeyDown}
+                  onFocus={() => setShowSuggestions(true)}
+                  autoFocus
+                  autoComplete="off"
+                  spellCheck="false"
+                />
+
+                {query && (
+                  <button 
+                    type="button" 
+                    className={styles.clearBtn}
+                    onClick={() => {
+                      setQuery('');
+                      setSuggestions([]);
+                      searchInputRef.current?.focus();
+                    }}
+                    aria-label="Clear search query"
+                  >
+                    <CloseIcon size={14} />
+                  </button>
+                )}
+
+                <div className={styles.keyboardHint} aria-hidden="true">
+                  <span>⌘K</span>
+                </div>
+
+                <button 
+                  type="submit" 
+                  className={styles.searchSubmitAction}
+                  disabled={isPending}
+                  aria-label="Execute search"
+                >
+                  <SearchIcon size={16} />
+                </button>
+              </div>
+            </form>
+
+            {showSuggestions && suggestions.length > 0 && (
+              <ul className={styles.suggestionsDropdown} role="listbox">
+                {suggestions.map((item, idx) => (
+                  <li
+                    key={item}
+                    role="option"
+                    aria-selected={idx === activeSuggestion}
+                    className={`${styles.suggestionRow} ${idx === activeSuggestion ? styles.suggestionRowActive : ''}`}
+                    onClick={() => {
+                      setQuery(item);
+                      setShowSuggestions(false);
+                      executeSearch(item);
+                    }}
+                  >
+                    <SearchIcon size={14} className={styles.suggestionIcon} />
+                    <span>{item}</span>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+
+          <nav className={styles.categoryNav} aria-label="Search categories">
+            {CATEGORIES.map((cat) => {
+              const Icon = cat.icon;
+              const isActive = selectedCategory === cat.id;
+              return (
+                <button
+                  key={cat.id}
+                  type="button"
+                  className={`${styles.categoryTab} ${isActive ? styles.categoryTabActive : ''}`}
+                  onClick={() => {
+                    setSelectedCategory(cat.id);
+                    if (query.trim()) {
+                      executeSearch(query, cat.id);
+                    }
+                  }}
+                >
+                  <Icon size={14} />
+                  <span>{cat.label}</span>
+                </button>
+              );
+            })}
+          </nav>
+
+          {/* Central status pill if no bottom modules occupy space (Desktop only) */}
+          {!hasBottomModules && (
+            <div className={styles.statusPillsRow}>
+              <div className={styles.statusPill}>
+                <span className={styles.statusDot} />
+                <span>LOCAL INSTANCE</span>
+              </div>
+              <div className={styles.statusDivider}>•</div>
+              <div className={styles.statusPill}>
+                <LayersIcon size={11} />
+                <span>MULTI-ENGINE AGGREGATE</span>
+              </div>
+              <div className={styles.statusDivider}>•</div>
+              <div className={styles.statusPill}>
+                <span>ZERO TELEMETRY</span>
+              </div>
+            </div>
+          )}
+
+          {/* Mobile Bottom Widgets (Shortcuts & Recent Searches) */}
+          {mobileBottomMods.length > 0 && (
+            <div className={styles.mobileBottomWidgets}>
+              {mobileBottomMods.map(renderModule)}
+            </div>
+          )}
+        </main>
+
+        {/* Bottom-Left Peripheral Zone (Desktop) */}
+        {bottomLeftMods.length > 0 && (
+          <aside className={`${styles.spatialZone} ${styles.zoneBottomLeft}`} aria-label="Bottom Left Module Zone">
+            {bottomLeftMods.map(renderModule)}
+          </aside>
+        )}
+
+        {/* Bottom-Right Peripheral Zone (Desktop) */}
+        {bottomRightMods.length > 0 && (
+          <aside className={`${styles.spatialZone} ${styles.zoneBottomRight}`} aria-label="Bottom Right Module Zone">
+            {bottomRightMods.map(renderModule)}
+          </aside>
+        )}
+
+      </div>
+
+      {/* Subtle Footer */}
       <footer className={styles.footer}>
         <div className={styles.footerBrand}>
           <span>SIFT</span>

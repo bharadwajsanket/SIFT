@@ -140,6 +140,79 @@ html[data-theme="light"] {
   --link-hover: #1d4ed8;
 }
 
+/* ==========================================================================
+   Visual Style: Matte Mode (Minimal, Flat, Pure Search Presentation)
+   ========================================================================== */
+
+/* Hide atmospheric wallpaper and overlay in Matte mode */
+html[data-visual-style="matte"] .siftAtmosphere {
+  display: none !important;
+}
+
+/* Global backdrop blur suppression in Matte mode */
+html[data-visual-style="matte"] * {
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+
+/* Dark + Matte */
+html[data-visual-style="matte"] {
+  --bg-base: #0c0d12;
+  --overlay-scrim: transparent;
+  --overlay-gradient: none;
+
+  /* Solid matte dark surfaces */
+  --glass-surface: #14151e;
+  --glass-surface-hover: #1c1e2a;
+  --glass-surface-active: #242738;
+  --glass-surface-subtle: #101118;
+
+  --glass-border: rgba(255, 255, 255, 0.08);
+  --glass-border-strong: rgba(255, 255, 255, 0.14);
+  --glass-border-subtle: rgba(255, 255, 255, 0.04);
+
+  --glass-blur: 0px;
+  --glass-shadow: none;
+  --glass-shadow-sm: none;
+  --glass-shadow-popover: 0 16px 36px -4px rgba(0, 0, 0, 0.75), 0 0 0 1px rgba(255, 255, 255, 0.12);
+  --glass-highlight: none;
+
+  --surface: #14151e;
+  --surface-hover: #1c1e2a;
+  --surface-active: #242738;
+  --border: rgba(255, 255, 255, 0.08);
+  --border-strong: rgba(255, 255, 255, 0.14);
+}
+
+/* Light + Matte */
+html[data-theme="light"][data-visual-style="matte"] {
+  --bg-base: #f8fafc;
+  --overlay-scrim: transparent;
+  --overlay-gradient: none;
+
+  /* Solid matte light surfaces */
+  --glass-surface: #ffffff;
+  --glass-surface-hover: #f8fafc;
+  --glass-surface-active: #f1f5f9;
+  --glass-surface-subtle: #f8fafc;
+
+  --glass-border: #e2e8f0;
+  --glass-border-strong: #cbd5e1;
+  --glass-border-subtle: #f1f5f9;
+
+  --glass-blur: 0px;
+  --glass-shadow: none;
+  --glass-shadow-sm: none;
+  --glass-shadow-popover: 0 16px 36px -4px rgba(0, 0, 0, 0.1), 0 0 0 1px #cbd5e1;
+  --glass-highlight: none;
+
+  --surface: #ffffff;
+  --surface-hover: #f8fafc;
+  --surface-active: #f1f5f9;
+  --border: #e2e8f0;
+  --border-strong: #cbd5e1;
+}
+
 /* Density: Compact */
 html[data-density="compact"] {
   --density-pad: 0.65rem;

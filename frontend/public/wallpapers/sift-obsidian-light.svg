@@ -1,0 +1,42 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1920 1080" width="100%" height="100%">
+  <defs>
+    <linearGradient id="ivorySky" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#e0e7f1"/>
+      <stop offset="50%" stop-color="#ecf0f7"/>
+      <stop offset="100%" stop-color="#f8fafc"/>
+    </linearGradient>
+    <linearGradient id="sharpRidge1" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#cbd5e1"/>
+      <stop offset="100%" stop-color="#94a3b8"/>
+    </linearGradient>
+    <linearGradient id="sharpRidge2" x1="100%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#e2e8f0"/>
+      <stop offset="100%" stop-color="#64748b"/>
+    </linearGradient>
+    <linearGradient id="ivoryPeakFront" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#8b9cb4"/>
+      <stop offset="100%" stop-color="#cbd5e1"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="1920" height="1080" fill="url(#ivorySky)"/>
+
+  <!-- Geometric Ivory Mountain Facets -->
+  <!-- Distant Peak -->
+  <polygon points="960,340 720,680 1200,680" fill="url(#sharpRidge1)" opacity="0.6"/>
+  <polygon points="960,340 1200,680 1280,680" fill="url(#sharpRidge2)" opacity="0.4"/>
+
+  <!-- Mid Left Peak -->
+  <polygon points="480,440 200,820 760,820" fill="url(#sharpRidge1)" opacity="0.75"/>
+  <polygon points="480,440 760,820 840,820" fill="url(#sharpRidge2)" opacity="0.55"/>
+
+  <!-- Mid Right Peak -->
+  <polygon points="1440,410 1100,800 1780,800" fill="url(#sharpRidge1)" opacity="0.7"/>
+  <polygon points="1440,410 1780,800 1860,800" fill="url(#sharpRidge2)" opacity="0.5"/>
+
+  <!-- Foreground Bold Ridge -->
+  <path d="M0,740 L380,620 L820,760 L1240,640 L1680,750 L1920,680 L1920,1080 L0,1080 Z" fill="url(#ivoryPeakFront)" opacity="0.8"/>
+
+  <!-- Low Valley Haze -->
+  <rect y="780" width="1920" height="300" fill="#f8fafc" opacity="0.7"/>
+</svg>

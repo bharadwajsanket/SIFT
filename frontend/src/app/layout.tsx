@@ -49,6 +49,9 @@ export default function RootLayout({
                     document.documentElement.setAttribute('data-theme', theme);
                   }
                   
+                  var visualStyle = (cfg && cfg.visualStyle) || 'glass';
+                  document.documentElement.setAttribute('data-visual-style', visualStyle);
+                  
                   var density = (cfg && cfg.density) || localStorage.getItem('sift-density') || 'comfortable';
                   document.documentElement.setAttribute('data-density', density);
                   

@@ -1,0 +1,34 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1920 1080" width="100%" height="100%">
+  <defs>
+    <linearGradient id="azureSky" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#cfe2f7"/>
+      <stop offset="30%" stop-color="#dbe9f9"/>
+      <stop offset="65%" stop-color="#edf4fc"/>
+      <stop offset="100%" stop-color="#fafcff"/>
+    </linearGradient>
+    <linearGradient id="cyanHorizonGlow" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#7dd3fc" stop-opacity="0.3"/>
+      <stop offset="50%" stop-color="#38bdf8" stop-opacity="0.5"/>
+      <stop offset="100%" stop-color="#a5f3fc" stop-opacity="0.3"/>
+    </linearGradient>
+    <linearGradient id="azureDune1" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#93c5fd" stop-opacity="0.75"/>
+      <stop offset="100%" stop-color="#dbeafe" stop-opacity="0.35"/>
+    </linearGradient>
+    <linearGradient id="azureDune2" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#60a5fa" stop-opacity="0.8"/>
+      <stop offset="100%" stop-color="#bfdbfe" stop-opacity="0.4"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="1920" height="1080" fill="url(#azureSky)"/>
+
+  <!-- Cyan Atmospheric Aurora Ribbon -->
+  <path d="M0,420 Q480,320 1080,390 T1920,340 L1920,560 Q1380,480 840,540 T0,490 Z" fill="url(#cyanHorizonGlow)"/>
+
+  <!-- Minimalist Clean Dunes -->
+  <path d="M0,640 Q620,520 1280,610 T1920,570 L1920,1080 L0,1080 Z" fill="url(#azureDune1)"/>
+  <path d="M0,760 Q540,660 1180,720 T1920,680 L1920,1080 L0,1080 Z" fill="url(#azureDune2)"/>
+
+  <rect y="860" width="1920" height="220" fill="#ffffff" opacity="0.6"/>
+</svg>

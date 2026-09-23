@@ -1,0 +1,51 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1920 1080" width="100%" height="100%">
+  <defs>
+    <linearGradient id="skyGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#dde4f0"/>
+      <stop offset="35%" stop-color="#e8ecf5"/>
+      <stop offset="70%" stop-color="#f3eff8"/>
+      <stop offset="100%" stop-color="#fdfafd"/>
+    </linearGradient>
+    <linearGradient id="sunGlow" x1="50%" y1="0%" x2="50%" y2="100%">
+      <stop offset="0%" stop-color="#fff8eb" stop-opacity="0.9"/>
+      <stop offset="50%" stop-color="#fae8eb" stop-opacity="0.5"/>
+      <stop offset="100%" stop-color="#eef2f9" stop-opacity="0"/>
+    </linearGradient>
+    <linearGradient id="peakBack" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#c5d0e3" stop-opacity="0.7"/>
+      <stop offset="100%" stop-color="#e5eaf3" stop-opacity="0.4"/>
+    </linearGradient>
+    <linearGradient id="peakMid" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#b4bed4" stop-opacity="0.8"/>
+      <stop offset="100%" stop-color="#d9dfea" stop-opacity="0.5"/>
+    </linearGradient>
+    <linearGradient id="peakFront" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#9aa7c4" stop-opacity="0.85"/>
+      <stop offset="100%" stop-color="#cbd3e2" stop-opacity="0.6"/>
+    </linearGradient>
+    <linearGradient id="mistGrad" x1="0%" y1="100%" x2="0%" y2="0%">
+      <stop offset="0%" stop-color="#f8fafc" stop-opacity="0.9"/>
+      <stop offset="50%" stop-color="#f1f5f9" stop-opacity="0.5"/>
+      <stop offset="100%" stop-color="#ffffff" stop-opacity="0"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Sky Base -->
+  <rect width="1920" height="1080" fill="url(#skyGrad)"/>
+
+  <!-- Morning Sun Orb & Soft Ambient Glow -->
+  <circle cx="960" cy="380" r="320" fill="url(#sunGlow)"/>
+  <circle cx="960" cy="380" r="160" fill="#fffbf5" opacity="0.6"/>
+
+  <!-- Background Mountain Ridge -->
+  <path d="M0,640 L180,560 L360,600 L540,510 L720,580 L960,460 L1200,550 L1420,490 L1680,580 L1920,520 L1920,1080 L0,1080 Z" fill="url(#peakBack)"/>
+
+  <!-- Midground Mountain Peaks -->
+  <path d="M0,720 L240,640 L480,690 L760,580 L1020,670 L1280,590 L1560,660 L1800,610 L1920,650 L1920,1080 L0,1080 Z" fill="url(#peakMid)"/>
+
+  <!-- Foreground Atmospheric Ridge -->
+  <path d="M0,820 L300,740 L620,790 L900,710 L1180,780 L1460,720 L1740,770 L1920,730 L1920,1080 L0,1080 Z" fill="url(#peakFront)"/>
+
+  <!-- Soft Valley Mist Layer -->
+  <rect y="680" width="1920" height="400" fill="url(#mistGrad)"/>
+</svg>

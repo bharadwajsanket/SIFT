@@ -10,7 +10,9 @@ import {
   RotateCcwIcon,
   CheckIcon,
   TrashIcon,
-  UploadIcon
+  UploadIcon,
+  ClockIcon,
+  GlobeIcon
 } from '@/components/icons';
 import { 
   OFFICIAL_WALLPAPERS, 
@@ -18,6 +20,13 @@ import {
   DensityMode, 
   MotionMode
 } from '@/lib/appearance';
+import { 
+  SiftHomeConfig, 
+  DEFAULT_HOME_CONFIG, 
+  loadHomeConfig, 
+  saveHomeConfig, 
+  HomeZone 
+} from '@/lib/homeModules';
 import { useAppearance } from '@/context/AppearanceContext';
 import { useAI } from '@/context/AIContext';
 import { MAP_PROVIDERS, DEFAULT_MAP_PROVIDER_ID } from '@/lib/mapProviders';
@@ -79,8 +88,17 @@ export const DEFAULT_ENABLED_ENGINES: Record<string, boolean> = {
   'sourcegraph': true,
 };
 
+const PLACEMENT_ZONES: { id: HomeZone; label: string }[] = [
+  { id: 'top-left', label: 'Top Left' },
+  { id: 'top-right', label: 'Top Right' },
+  { id: 'bottom-left', label: 'Bottom Left' },
+  { id: 'bottom-right', label: 'Bottom Right' },
+];
+
 export function SettingsPanel({ isOpen, onClose }: SettingsPanelProps) {
-  const [activeTab, setActiveTab] = useState<'appearance' | 'general' | 'search' | 'providers' | 'maps' | 'privacy'>('appearance');
+  const [activeTab, setActiveTab] = useState<'appearance' | 'home' | 'general' | 'search' | 'providers' | 'maps' | 'privacy'>('appearance');
+  const [wallpaperFilter, setWallpaperFilter] = useState<'all' | 'dark' | 'light'>('all');
+  const [homeConfig, setHomeConfig] = useState<SiftHomeConfig>(DEFAULT_HOME_CONFIG);
   
   // Appearance from Context
   const { 
@@ -112,6 +130,8 @@ export function SettingsPanel({ isOpen, onClose }: SettingsPanelProps) {
   const [showResetConfirm, setShowResetConfirm] = useState(false);
   const [urlInput, setUrlInput] = useState(config.wallpaperCustomUrl || '');
   const [uploadError, setUploadError] = useState<string | null>(null);
+  const [newShortcutTitle, setNewShortcutTitle] = useState<string>('');
+  const [newShortcutUrl, setNewShortcutUrl] = useState<string>('');
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -119,6 +139,7 @@ export function SettingsPanel({ isOpen, onClose }: SettingsPanelProps) {
     if (typeof window !== 'undefined') {
       if (isOpen) {
         checkStatus();
+        setHomeConfig(loadHomeConfig());
       }
       const storedSafeSearch = localStorage.getItem('sift-safesearch') || '1';
       const storedLanguage = localStorage.getItem('sift-language') || 'all';
@@ -141,6 +162,26 @@ export function SettingsPanel({ isOpen, onClose }: SettingsPanelProps) {
       setUrlInput(config.wallpaperCustomUrl || '');
     }
   }, [isOpen, config.wallpaperCustomUrl, checkStatus]);
+
+  const updateHomeModule = (moduleId: keyof SiftHomeConfig['modules'], partial: any) => {
+    setHomeConfig((prev) => {
+      const updated = {
+        ...prev,
+        modules: {
+          ...prev.modules,
+          [moduleId]: {
+            ...prev.modules[moduleId],
+            ...partial,
+          },
+        },
+      };
+      saveHomeConfig(updated);
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('sift-home-config-updated', { detail: updated }));
+      }
+      return updated;
+    });
+  };
 
   const applySafeSearch = (val: string) => {
     setSafeSearch(val);
@@ -187,7 +228,6 @@ export function SettingsPanel({ isOpen, onClose }: SettingsPanelProps) {
       return;
     }
 
-    // Limit to reasonable client image size (e.g. 25MB)
     if (file.size > 25 * 1024 * 1024) {
       setUploadError('Image size should be under 25MB for optimal performance.');
       return;
@@ -209,8 +249,35 @@ export function SettingsPanel({ isOpen, onClose }: SettingsPanelProps) {
     });
   };
 
+  const handleAddShortcut = (e: React.FormEvent) => {
+    e.preventDefault();
+    const title = newShortcutTitle.trim();
+    const url = newShortcutUrl.trim();
+    if (!title || !url) return;
+
+    const currentShortcuts = homeConfig.modules.shortcuts.items || [];
+    const newId = 'sc_' + Date.now().toString(36);
+    const updated = [...currentShortcuts, { id: newId, label: title, url }];
+    
+    updateHomeModule('shortcuts', { items: updated });
+    setNewShortcutTitle('');
+    setNewShortcutUrl('');
+  };
+
+  const handleDeleteShortcut = (id: string) => {
+    const currentShortcuts = homeConfig.modules.shortcuts.items || [];
+    const updated = currentShortcuts.filter((s) => s.id !== id);
+    updateHomeModule('shortcuts', { items: updated });
+  };
+
   const handleResetAll = async () => {
     await resetToDefaults();
+    const defaultHome = { ...DEFAULT_HOME_CONFIG };
+    setHomeConfig(defaultHome);
+    saveHomeConfig(defaultHome);
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('sift-home-config-updated', { detail: defaultHome }));
+    }
     setShowResetConfirm(false);
   };
 
@@ -225,6 +292,12 @@ export function SettingsPanel({ isOpen, onClose }: SettingsPanelProps) {
   }, [isOpen, onClose]);
 
   if (!isOpen) return null;
+
+  const filteredWallpapers = OFFICIAL_WALLPAPERS.filter((wp) => {
+    if (wallpaperFilter === 'dark') return wp.theme === 'dark';
+    if (wallpaperFilter === 'light') return wp.theme === 'light';
+    return true;
+  });
 
   return (
     <div className={styles.drawerOverlay} onClick={onClose} role="dialog" aria-modal="true" aria-labelledby="settings-drawer-title">
@@ -255,6 +328,15 @@ export function SettingsPanel({ isOpen, onClose }: SettingsPanelProps) {
             onClick={() => setActiveTab('appearance')}
           >
             Appearance
+          </button>
+          <button
+            type="button"
+            role="tab"
+            aria-selected={activeTab === 'home'}
+            className={`${styles.tabBtn} ${activeTab === 'home' ? styles.tabBtnActive : ''}`}
+            onClick={() => setActiveTab('home')}
+          >
+            Home
           </button>
           <button
             type="button"
@@ -304,18 +386,88 @@ export function SettingsPanel({ isOpen, onClose }: SettingsPanelProps) {
         </div>
 
         <div className={styles.drawerBody}>
+          {/* ==========================================================
+              1. APPEARANCE TAB
+             ========================================================== */}
           {activeTab === 'appearance' && (
             <div className={styles.settingsSection}>
               
-              {/* Wallpaper Source Selection */}
+              {/* Visual Style — Apple Segmented Control */}
+              <div className={styles.settingItem}>
+                <div className={styles.sectionHeaderRow}>
+                  <label className={styles.settingLabel}>Visual Style</label>
+                  <span className={styles.localBadge}>{config.visualStyle.toUpperCase()}</span>
+                </div>
+                <div className={styles.appleSegmentTrack}>
+                  <button
+                    type="button"
+                    className={`${styles.appleSegmentItem} ${config.visualStyle === 'glass' ? styles.appleSegmentActive : ''}`}
+                    onClick={() => updateConfig({ visualStyle: 'glass' })}
+                    aria-pressed={config.visualStyle === 'glass'}
+                  >
+                    <span>Glass</span>
+                  </button>
+                  <button
+                    type="button"
+                    className={`${styles.appleSegmentItem} ${config.visualStyle === 'matte' ? styles.appleSegmentActive : ''}`}
+                    onClick={() => updateConfig({ visualStyle: 'matte' })}
+                    aria-pressed={config.visualStyle === 'matte'}
+                  >
+                    <span>Matte</span>
+                  </button>
+                </div>
+                <span className={styles.settingDesc}>
+                  {config.visualStyle === 'glass'
+                    ? 'Glass — atmospheric and immersive'
+                    : 'Matte — minimal and distraction-free'}
+                </span>
+              </div>
+
+              {/* Theme Mode — Apple Segmented Control */}
+              <div className={styles.settingItem}>
+                <label className={styles.settingLabel}>Theme Mode</label>
+                <div className={styles.appleSegmentTrack}>
+                  <button
+                    type="button"
+                    className={`${styles.appleSegmentItem} ${config.theme === 'system' ? styles.appleSegmentActive : ''}`}
+                    onClick={() => updateConfig({ theme: 'system' })}
+                  >
+                    <ComputerIcon size={13} />
+                    <span>System</span>
+                  </button>
+                  <button
+                    type="button"
+                    className={`${styles.appleSegmentItem} ${config.theme === 'light' ? styles.appleSegmentActive : ''}`}
+                    onClick={() => updateConfig({ theme: 'light' })}
+                  >
+                    <SunIcon size={13} />
+                    <span>Light</span>
+                  </button>
+                  <button
+                    type="button"
+                    className={`${styles.appleSegmentItem} ${config.theme === 'dark' ? styles.appleSegmentActive : ''}`}
+                    onClick={() => updateConfig({ theme: 'dark' })}
+                  >
+                    <MoonIcon size={13} />
+                    <span>Dark</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* Wallpaper Environment */}
               <div className={styles.settingItem}>
                 <div className={styles.sectionHeaderRow}>
                   <label className={styles.settingLabel}>Wallpaper Environment</label>
                   <span className={styles.localBadge}>LOCAL STORAGE ONLY</span>
                 </div>
                 <span className={styles.settingDesc}>
-                  Select from the official SIFT collection, upload a local file, or specify an image URL.
+                  SIFT includes curated Dark &amp; Light atmospheric collections with automatic system theme pairing.
                 </span>
+                {config.visualStyle === 'matte' && (
+                  <span className={styles.pairedHintText} style={{ marginTop: '0.2rem' }}>
+                    ⓘ Atmospheric wallpaper is suppressed in Matte mode. Your wallpaper choice is preserved when returning to Glass.
+                  </span>
+                )}
 
                 {/* Source Subtabs */}
                 <div className={styles.wallpaperSourceTabs}>
@@ -324,7 +476,7 @@ export function SettingsPanel({ isOpen, onClose }: SettingsPanelProps) {
                     className={`${styles.sourceTabBtn} ${config.wallpaperSource === 'official' ? styles.sourceTabBtnActive : ''}`}
                     onClick={() => updateConfig({ wallpaperSource: 'official' })}
                   >
-                    Official Collection
+                    Official Catalog
                   </button>
                   <button
                     type="button"
@@ -342,36 +494,76 @@ export function SettingsPanel({ isOpen, onClose }: SettingsPanelProps) {
                   </button>
                 </div>
 
-                {/* 1. Official Collection Cards */}
+                {/* 1. Official Collection Filter & Grid */}
                 {config.wallpaperSource === 'official' && (
-                  <div className={styles.wallpaperGrid}>
-                    {OFFICIAL_WALLPAPERS.map((wp) => {
-                      const isSelected = config.wallpaperSource === 'official' && config.wallpaperId === wp.id;
-                      return (
-                        <div
-                          key={wp.id}
-                          className={`${styles.wallpaperCard} ${isSelected ? styles.wallpaperCardSelected : ''}`}
-                          onClick={() => updateConfig({ wallpaperId: wp.id, wallpaperSource: 'official' })}
-                          role="button"
-                          tabIndex={0}
-                        >
-                          <div className={styles.wallpaperThumbWrapper}>
-                            {/* eslint-disable-next-line @next/next/no-img-element */}
-                            <img src={wp.thumbnail} alt={wp.title} className={styles.wallpaperThumb} />
-                            {isSelected && (
-                              <div className={styles.selectedCheckOverlay}>
-                                <CheckIcon size={14} />
+                  <>
+                    <div className={styles.wallpaperThemeFilter}>
+                      <button
+                        type="button"
+                        className={`${styles.filterPill} ${wallpaperFilter === 'all' ? styles.filterPillActive : ''}`}
+                        onClick={() => setWallpaperFilter('all')}
+                      >
+                        All ({OFFICIAL_WALLPAPERS.length})
+                      </button>
+                      <button
+                        type="button"
+                        className={`${styles.filterPill} ${wallpaperFilter === 'dark' ? styles.filterPillActive : ''}`}
+                        onClick={() => setWallpaperFilter('dark')}
+                      >
+                        <MoonIcon size={11} />
+                        <span>Dark Wallpapers</span>
+                      </button>
+                      <button
+                        type="button"
+                        className={`${styles.filterPill} ${wallpaperFilter === 'light' ? styles.filterPillActive : ''}`}
+                        onClick={() => setWallpaperFilter('light')}
+                      >
+                        <SunIcon size={11} />
+                        <span>Light Wallpapers</span>
+                      </button>
+                    </div>
+
+                    <div className={styles.wallpaperGrid}>
+                      {filteredWallpapers.map((wp) => {
+                        const isSelected = config.wallpaperSource === 'official' && config.wallpaperId === wp.id;
+                        const pairedName = wp.pairedId ? OFFICIAL_WALLPAPERS.find(p => p.id === wp.pairedId)?.title : null;
+
+                        return (
+                          <div
+                            key={wp.id}
+                            className={`${styles.wallpaperCard} ${isSelected ? styles.wallpaperCardSelected : ''}`}
+                            onClick={() => updateConfig({ wallpaperId: wp.id, wallpaperSource: 'official' })}
+                            role="button"
+                            tabIndex={0}
+                          >
+                            <div className={styles.wallpaperThumbWrapper}>
+                              {/* eslint-disable-next-line @next/next/no-img-element */}
+                              <img src={wp.thumbnail} alt={wp.title} className={styles.wallpaperThumb} />
+                              <div className={styles.themeBadge}>
+                                {wp.theme === 'light' ? 'LIGHT' : 'DARK'}
                               </div>
-                            )}
+                              {isSelected && (
+                                <div className={styles.selectedCheckOverlay}>
+                                  <CheckIcon size={14} />
+                                </div>
+                              )}
+                            </div>
+                            <div className={styles.wallpaperCardInfo}>
+                              <div className={styles.wallpaperCardHeader}>
+                                <span className={styles.wallpaperCardTitle}>{wp.title}</span>
+                              </div>
+                              <span className={styles.wallpaperCardSub}>{wp.subtitle}</span>
+                              {pairedName && (
+                                <span className={styles.pairedHintText}>
+                                  ⇄ Auto-pairs with {pairedName}
+                                </span>
+                              )}
+                            </div>
                           </div>
-                          <div className={styles.wallpaperCardInfo}>
-                            <span className={styles.wallpaperCardTitle}>{wp.title}</span>
-                            <span className={styles.wallpaperCardSub}>{wp.subtitle}</span>
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
+                        );
+                      })}
+                    </div>
+                  </>
                 )}
 
                 {/* 2. Local Device Upload */}
@@ -475,7 +667,7 @@ export function SettingsPanel({ isOpen, onClose }: SettingsPanelProps) {
                   {/* Blur */}
                   <div className={styles.sliderControl}>
                     <div className={styles.sliderHeader}>
-                      <span>Background Blur</span>
+                      <span>Atmospheric Blur</span>
                       <span className={styles.sliderVal}>{config.wallpaperBlur}px</span>
                     </div>
                     <input
@@ -506,12 +698,12 @@ export function SettingsPanel({ isOpen, onClose }: SettingsPanelProps) {
                     />
                   </div>
 
-                  {/* Position */}
+                  {/* Position — Apple Segmented Control */}
                   <div className={styles.sliderControl}>
                     <div className={styles.sliderHeader}>
                       <span>Alignment</span>
                     </div>
-                    <div className={styles.segmentGroup}>
+                    <div className={styles.appleSegmentTrack}>
                       {[
                         { id: 'center top', label: 'Top' },
                         { id: 'center 30%', label: 'Upper' },
@@ -521,7 +713,7 @@ export function SettingsPanel({ isOpen, onClose }: SettingsPanelProps) {
                         <button
                           key={pos.id}
                           type="button"
-                          className={`${styles.segmentBtn} ${config.wallpaperPosition === pos.id ? styles.segmentBtnActive : ''}`}
+                          className={`${styles.appleSegmentItem} ${config.wallpaperPosition === pos.id ? styles.appleSegmentActive : ''}`}
                           onClick={() => updateConfig({ wallpaperPosition: pos.id })}
                         >
                           {pos.label}
@@ -611,27 +803,27 @@ export function SettingsPanel({ isOpen, onClose }: SettingsPanelProps) {
               <div className={styles.settingItem}>
                 <label className={styles.settingLabel}>Accent Color System</label>
                 
-                <div className={styles.segmentGroup} style={{ marginBottom: '0.75rem' }}>
+                <div className={styles.appleSegmentTrack} style={{ marginBottom: '0.75rem' }}>
                   <button
                     type="button"
-                    className={`${styles.segmentBtn} ${config.accentMode === 'auto' ? styles.segmentBtnActive : ''}`}
+                    className={`${styles.appleSegmentItem} ${config.accentMode === 'auto' ? styles.appleSegmentActive : ''}`}
                     onClick={() => updateConfig({ accentMode: 'auto' })}
                   >
-                    Automatic (Wallpaper Derived)
+                    Automatic (Wallpaper Tone)
                   </button>
                   <button
                     type="button"
-                    className={`${styles.segmentBtn} ${config.accentMode === 'manual' ? styles.segmentBtnActive : ''}`}
+                    className={`${styles.appleSegmentItem} ${config.accentMode === 'manual' ? styles.appleSegmentActive : ''}`}
                     onClick={() => updateConfig({ accentMode: 'manual' })}
                   >
-                    Manual Curated
+                    Curated Palette
                   </button>
                 </div>
 
                 {config.accentMode === 'auto' ? (
                   <div className={styles.autoAccentNotice}>
                     <div className={styles.colorDot} style={{ backgroundColor: activeAccent }} />
-                    <span>Derived tone: <strong>{activeAccent}</strong> dynamically paired with your wallpaper.</span>
+                    <span>Active Tone: <strong>{activeAccent}</strong> automatically paired with your current wallpaper.</span>
                   </div>
                 ) : (
                   <div className={styles.swatchGrid}>
@@ -657,46 +849,15 @@ export function SettingsPanel({ isOpen, onClose }: SettingsPanelProps) {
                 )}
               </div>
 
-              {/* Theme Mode */}
-              <div className={styles.settingItem}>
-                <label className={styles.settingLabel}>Theme Mode</label>
-                <div className={styles.themeGrid}>
-                  <button
-                    type="button"
-                    className={`${styles.themeOption} ${config.theme === 'dark' ? styles.themeOptionActive : ''}`}
-                    onClick={() => updateConfig({ theme: 'dark' })}
-                  >
-                    <MoonIcon size={14} />
-                    <span>Dark</span>
-                  </button>
-                  <button
-                    type="button"
-                    className={`${styles.themeOption} ${config.theme === 'light' ? styles.themeOptionActive : ''}`}
-                    onClick={() => updateConfig({ theme: 'light' })}
-                  >
-                    <SunIcon size={14} />
-                    <span>Light</span>
-                  </button>
-                  <button
-                    type="button"
-                    className={`${styles.themeOption} ${config.theme === 'system' ? styles.themeOptionActive : ''}`}
-                    onClick={() => updateConfig({ theme: 'system' })}
-                  >
-                    <ComputerIcon size={14} />
-                    <span>System</span>
-                  </button>
-                </div>
-              </div>
-
-              {/* Interface Density */}
+              {/* Interface Density — Apple Segmented Control */}
               <div className={styles.settingItem}>
                 <label className={styles.settingLabel}>Interface Density</label>
-                <div className={styles.segmentGroup}>
+                <div className={styles.appleSegmentTrack}>
                   {(['compact', 'comfortable', 'spacious'] as DensityMode[]).map((d) => (
                     <button
                       key={d}
                       type="button"
-                      className={`${styles.segmentBtn} ${config.density === d ? styles.segmentBtnActive : ''}`}
+                      className={`${styles.appleSegmentItem} ${config.density === d ? styles.appleSegmentActive : ''}`}
                       onClick={() => updateConfig({ density: d })}
                     >
                       {d.charAt(0).toUpperCase() + d.slice(1)}
@@ -705,15 +866,15 @@ export function SettingsPanel({ isOpen, onClose }: SettingsPanelProps) {
                 </div>
               </div>
 
-              {/* Motion Intensity */}
+              {/* Motion Intensity — Apple Segmented Control */}
               <div className={styles.settingItem}>
                 <label className={styles.settingLabel}>Motion &amp; Animations</label>
-                <div className={styles.segmentGroup}>
+                <div className={styles.appleSegmentTrack}>
                   {(['full', 'reduced', 'off'] as MotionMode[]).map((m) => (
                     <button
                       key={m}
                       type="button"
-                      className={`${styles.segmentBtn} ${config.motion === m ? styles.segmentBtnActive : ''}`}
+                      className={`${styles.appleSegmentItem} ${config.motion === m ? styles.appleSegmentActive : ''}`}
                       onClick={() => updateConfig({ motion: m })}
                     >
                       {m === 'full' ? 'Full' : m === 'reduced' ? 'Reduced' : 'Off'}
@@ -761,10 +922,342 @@ export function SettingsPanel({ isOpen, onClose }: SettingsPanelProps) {
             </div>
           )}
 
+          {/* ==========================================================
+              2. HOME CANVAS TAB (Integrated Spatial Modules)
+             ========================================================== */}
+          {activeTab === 'home' && (
+            <div className={styles.settingsSection}>
+              <div className={styles.settingItem}>
+                <div className={styles.sectionHeaderRow}>
+                  <label className={styles.settingLabel}>Spatial Canvas Modules</label>
+                  <span className={styles.localBadge}>DESKTOP SPATIAL CANVAS</span>
+                </div>
+                <span className={styles.settingDesc}>
+                  Enable subtle peripheral modules on desktop. On tablet &amp; mobile, modules gracefully collapse into standard flow.
+                </span>
+              </div>
+
+              {/* Module 1: Clock & Date */}
+              <div className={styles.moduleControlCard}>
+                <div className={styles.moduleControlHeader}>
+                  <div className={styles.moduleControlTitleGroup}>
+                    <ClockIcon size={15} className={styles.moduleControlIcon} />
+                    <div>
+                      <h3 className={styles.moduleControlTitle}>Time &amp; Date</h3>
+                      <p className={styles.moduleControlSub}>Live updating typographic clock and localized day</p>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    role="switch"
+                    aria-checked={homeConfig.modules.clock.enabled}
+                    aria-label="Toggle Time & Date Module"
+                    className={`${styles.appleSwitch} ${homeConfig.modules.clock.enabled ? styles.appleSwitchOn : ''}`}
+                    onClick={() => updateHomeModule('clock', { enabled: !homeConfig.modules.clock.enabled })}
+                  >
+                    <span className={styles.appleSwitchThumb} />
+                  </button>
+                </div>
+
+                {homeConfig.modules.clock.enabled && (
+                  <>
+                    <div className={styles.moduleZoneSelector}>
+                      <span className={styles.zoneLabel}>Placement Zone</span>
+                      <div className={styles.appleSegmentTrack}>
+                        {PLACEMENT_ZONES.map((z) => (
+                          <button
+                            key={z.id}
+                            type="button"
+                            className={`${styles.appleSegmentItem} ${homeConfig.modules.clock.zone === z.id ? styles.appleSegmentActive : ''}`}
+                            onClick={() => updateHomeModule('clock', { zone: z.id })}
+                          >
+                            {z.label}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                    <div style={{ marginTop: '0.75rem', display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
+                      <span className={styles.zoneLabel}>Time Format</span>
+                      <div className={styles.appleSegmentTrack} style={{ maxWidth: '240px' }}>
+                        <button
+                          type="button"
+                          className={`${styles.appleSegmentItem} ${(homeConfig.modules.clock.hourFormat || '24h') === '24h' ? styles.appleSegmentActive : ''}`}
+                          onClick={() => updateHomeModule('clock', { hourFormat: '24h' })}
+                        >
+                          24-Hour (00:00)
+                        </button>
+                        <button
+                          type="button"
+                          className={`${styles.appleSegmentItem} ${homeConfig.modules.clock.hourFormat === '12h' ? styles.appleSegmentActive : ''}`}
+                          onClick={() => updateHomeModule('clock', { hourFormat: '12h' })}
+                        >
+                          12-Hour (12:00 AM)
+                        </button>
+                      </div>
+                    </div>
+
+                    <div style={{ marginTop: '0.75rem', display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
+                      <span className={styles.zoneLabel}>Clock Timezone</span>
+                      <select
+                        value={homeConfig.modules.clock.timezone || 'local'}
+                        onChange={(e) => updateHomeModule('clock', { timezone: e.target.value })}
+                        className={styles.settingSelect}
+                        style={{ fontSize: '0.82rem', padding: '0.45rem 0.65rem' }}
+                      >
+                        <option value="local">Local Browser Time</option>
+                        <option value="UTC">UTC (Coordinated Universal Time)</option>
+                        <option value="America/New_York">New York (EST/EDT)</option>
+                        <option value="America/Los_Angeles">Los Angeles (PST/PDT)</option>
+                        <option value="America/Chicago">Chicago (CST/CDT)</option>
+                        <option value="Europe/London">London (GMT/BST)</option>
+                        <option value="Europe/Paris">Paris / Berlin (CET/CEST)</option>
+                        <option value="Asia/Kolkata">India / New Delhi (IST)</option>
+                        <option value="Asia/Dubai">Dubai (GST)</option>
+                        <option value="Asia/Singapore">Singapore (SGT)</option>
+                        <option value="Asia/Tokyo">Tokyo (JST)</option>
+                        <option value="Australia/Sydney">Sydney (AEST/AEDT)</option>
+                      </select>
+                    </div>
+                  </>
+                )}
+              </div>
+
+              {/* Module 2: Atmosphere & Weather */}
+              <div className={styles.moduleControlCard}>
+                <div className={styles.moduleControlHeader}>
+                  <div className={styles.moduleControlTitleGroup}>
+                    <SunIcon size={15} className={styles.moduleControlIcon} />
+                    <div>
+                      <h3 className={styles.moduleControlTitle}>Atmosphere &amp; Climate</h3>
+                      <p className={styles.moduleControlSub}>Live temperature, sky condition, and weather status</p>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    role="switch"
+                    aria-checked={homeConfig.modules.weather.enabled}
+                    aria-label="Toggle Atmosphere & Weather Module"
+                    className={`${styles.appleSwitch} ${homeConfig.modules.weather.enabled ? styles.appleSwitchOn : ''}`}
+                    onClick={() => updateHomeModule('weather', { enabled: !homeConfig.modules.weather.enabled })}
+                  >
+                    <span className={styles.appleSwitchThumb} />
+                  </button>
+                </div>
+
+                {homeConfig.modules.weather.enabled && (
+                  <>
+                    <div className={styles.moduleZoneSelector}>
+                      <span className={styles.zoneLabel}>Placement Zone</span>
+                      <div className={styles.appleSegmentTrack}>
+                        {PLACEMENT_ZONES.map((z) => (
+                          <button
+                            key={z.id}
+                            type="button"
+                            className={`${styles.appleSegmentItem} ${homeConfig.modules.weather.zone === z.id ? styles.appleSegmentActive : ''}`}
+                            onClick={() => updateHomeModule('weather', { zone: z.id })}
+                          >
+                            {z.label}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div style={{ marginTop: '0.75rem', display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
+                      <span className={styles.zoneLabel}>Temperature Unit</span>
+                      <div className={styles.appleSegmentTrack} style={{ maxWidth: '240px' }}>
+                        <button
+                          type="button"
+                          className={`${styles.appleSegmentItem} ${homeConfig.modules.weather.unit === 'c' ? styles.appleSegmentActive : ''}`}
+                          onClick={() => updateHomeModule('weather', { unit: 'c' })}
+                        >
+                          °C (Celsius)
+                        </button>
+                        <button
+                          type="button"
+                          className={`${styles.appleSegmentItem} ${homeConfig.modules.weather.unit === 'f' ? styles.appleSegmentActive : ''}`}
+                          onClick={() => updateHomeModule('weather', { unit: 'f' })}
+                        >
+                          °F (Fahrenheit)
+                        </button>
+                      </div>
+                    </div>
+
+                    <div style={{ marginTop: '0.75rem', display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
+                      <span className={styles.zoneLabel}>Custom City / Location</span>
+                      <input
+                        type="text"
+                        placeholder="e.g. London, San Francisco, Tokyo (empty for auto)"
+                        value={homeConfig.modules.weather.city || ''}
+                        onChange={(e) => updateHomeModule('weather', { city: e.target.value })}
+                        className={styles.urlInputField}
+                        style={{ fontSize: '0.82rem', padding: '0.45rem 0.65rem' }}
+                      />
+                      <span className={styles.settingDesc} style={{ fontSize: '0.72rem', marginTop: '0.25rem', color: 'var(--text-muted)' }}>
+                        ⓘ Weather &amp; geocoding queries are fetched directly from <strong>Open-Meteo API</strong> (open-meteo.com — open-source, non-commercial, zero telemetry, no personal data sent or stored).
+                      </span>
+                    </div>
+                  </>
+                )}
+              </div>
+
+              {/* Module 3: Recent Searches */}
+              <div className={styles.moduleControlCard}>
+                <div className={styles.moduleControlHeader}>
+                  <div className={styles.moduleControlTitleGroup}>
+                    <ClockIcon size={15} className={styles.moduleControlIcon} />
+                    <div>
+                      <h3 className={styles.moduleControlTitle}>Recent Queries</h3>
+                      <p className={styles.moduleControlSub}>Fast one-click access to recent local search history</p>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    role="switch"
+                    aria-checked={homeConfig.modules.recentSearches.enabled}
+                    aria-label="Toggle Recent Queries Module"
+                    className={`${styles.appleSwitch} ${homeConfig.modules.recentSearches.enabled ? styles.appleSwitchOn : ''}`}
+                    onClick={() => updateHomeModule('recentSearches', { enabled: !homeConfig.modules.recentSearches.enabled })}
+                  >
+                    <span className={styles.appleSwitchThumb} />
+                  </button>
+                </div>
+
+                {homeConfig.modules.recentSearches.enabled && (
+                  <div className={styles.moduleZoneSelector}>
+                    <span className={styles.zoneLabel}>Placement Zone</span>
+                    <div className={styles.appleSegmentTrack}>
+                      {PLACEMENT_ZONES.map((z) => (
+                        <button
+                          key={z.id}
+                          type="button"
+                          className={`${styles.appleSegmentItem} ${homeConfig.modules.recentSearches.zone === z.id ? styles.appleSegmentActive : ''}`}
+                          onClick={() => updateHomeModule('recentSearches', { zone: z.id })}
+                        >
+                          {z.label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Module 4: Pinned Shortcuts */}
+              <div className={styles.moduleControlCard}>
+                <div className={styles.moduleControlHeader}>
+                  <div className={styles.moduleControlTitleGroup}>
+                    <GlobeIcon size={15} className={styles.moduleControlIcon} />
+                    <div>
+                      <h3 className={styles.moduleControlTitle}>Pinned Shortcuts</h3>
+                      <p className={styles.moduleControlSub}>Direct link launcher with auto-fetched favicons</p>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    role="switch"
+                    aria-checked={homeConfig.modules.shortcuts.enabled}
+                    aria-label="Toggle Pinned Shortcuts Module"
+                    className={`${styles.appleSwitch} ${homeConfig.modules.shortcuts.enabled ? styles.appleSwitchOn : ''}`}
+                    onClick={() => updateHomeModule('shortcuts', { enabled: !homeConfig.modules.shortcuts.enabled })}
+                  >
+                    <span className={styles.appleSwitchThumb} />
+                  </button>
+                </div>
+
+                {homeConfig.modules.shortcuts.enabled && (
+                  <>
+                    <div className={styles.moduleZoneSelector}>
+                      <span className={styles.zoneLabel}>Placement Zone</span>
+                      <div className={styles.appleSegmentTrack}>
+                        {PLACEMENT_ZONES.map((z) => (
+                          <button
+                            key={z.id}
+                            type="button"
+                            className={`${styles.appleSegmentItem} ${homeConfig.modules.shortcuts.zone === z.id ? styles.appleSegmentActive : ''}`}
+                            onClick={() => updateHomeModule('shortcuts', { zone: z.id })}
+                          >
+                            {z.label}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Shortcuts Manager List */}
+                    <div style={{ marginTop: '0.85rem', display: 'flex', flexDirection: 'column', gap: '0.45rem' }}>
+                      <span className={styles.zoneLabel}>Pinned Links List</span>
+                      
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
+                        {(homeConfig.modules.shortcuts.items || []).map((sc) => (
+                          <div 
+                            key={sc.id} 
+                            style={{ 
+                              display: 'flex', 
+                              alignItems: 'center', 
+                              justifyContent: 'space-between', 
+                              padding: '0.45rem 0.65rem', 
+                              background: 'var(--glass-surface)', 
+                              border: '1px solid var(--glass-border)', 
+                              borderRadius: 'var(--radius-xs)',
+                              gap: '0.5rem'
+                            }}
+                          >
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', minWidth: 0, flex: 1 }}>
+                              <GlobeIcon size={13} style={{ color: 'var(--accent)', flexShrink: 0 }} />
+                              <span style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--text)', whiteSpace: 'nowrap' }}>{sc.label}</span>
+                              <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{sc.url}</span>
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => handleDeleteShortcut(sc.id)}
+                              style={{ color: 'var(--text-muted)', padding: '0.2rem', cursor: 'pointer', display: 'flex', alignItems: 'center', flexShrink: 0 }}
+                              title="Delete shortcut"
+                            >
+                              <TrashIcon size={12} />
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+
+                      {/* Add New Shortcut Form */}
+                      <form onSubmit={handleAddShortcut} style={{ display: 'flex', gap: '0.4rem', marginTop: '0.35rem' }}>
+                        <input
+                          type="text"
+                          placeholder="Title (e.g. GitHub)"
+                          value={newShortcutTitle}
+                          onChange={(e) => setNewShortcutTitle(e.target.value)}
+                          className={styles.urlInputField}
+                          style={{ width: '130px', padding: '0.4rem 0.6rem', fontSize: '0.78rem' }}
+                        />
+                        <input
+                          type="url"
+                          placeholder="https://example.com"
+                          value={newShortcutUrl}
+                          onChange={(e) => setNewShortcutUrl(e.target.value)}
+                          className={styles.urlInputField}
+                          style={{ flex: 1, padding: '0.4rem 0.6rem', fontSize: '0.78rem' }}
+                        />
+                        <button
+                          type="submit"
+                          className={styles.urlApplyBtn}
+                          style={{ padding: '0.4rem 0.75rem', fontSize: '0.78rem' }}
+                        >
+                          Add
+                        </button>
+                      </form>
+                    </div>
+                  </>
+                )}
+              </div>
+
+            </div>
+          )}
+
+          {/* ==========================================================
+              3. GENERAL TAB
+             ========================================================== */}
           {activeTab === 'general' && (
             <div className={styles.settingsSection}>
               
-              {/* Local AI Overview Controls */}
+              {/* Local AI Overview Controls — Apple Sliding Switch */}
               <div className={styles.settingItem}>
                 <div className={styles.sectionHeaderRow}>
                   <label className={styles.settingLabel}>AI Overview</label>
@@ -781,7 +1274,7 @@ export function SettingsPanel({ isOpen, onClose }: SettingsPanelProps) {
                       aria-hidden="true"
                     />
                     <span className={styles.localBadge}>
-                      {aiStatus === 'local' ? 'Local' : aiStatus === 'disabled' ? 'Disabled' : 'Offline'}
+                      {aiStatus === 'local' ? 'Local GGUF' : aiStatus === 'disabled' ? 'Disabled' : 'Offline'}
                     </span>
                   </div>
                 </div>
@@ -789,26 +1282,17 @@ export function SettingsPanel({ isOpen, onClose }: SettingsPanelProps) {
                   Deliver concise standalone answers directly above search results using your local GGUF model.
                 </span>
 
-                <div className={styles.segmentGroup} style={{ marginTop: '0.35rem' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.65rem 0.85rem', backgroundColor: 'var(--glass-surface)', border: '1px solid var(--glass-border)', borderRadius: 'var(--radius-sm)', marginTop: '0.45rem' }}>
+                  <span style={{ fontSize: '0.86rem', color: 'var(--text)' }}>Enable Local AI Overview</span>
                   <button
                     type="button"
                     role="switch"
                     aria-checked={aiEnabled}
-                    aria-label="Enable AI Overview"
-                    className={`${styles.segmentBtn} ${aiEnabled ? styles.segmentBtnActive : ''}`}
-                    onClick={() => setAiEnabled(true)}
+                    aria-label="Toggle Local AI Overview"
+                    className={`${styles.appleSwitch} ${aiEnabled ? styles.appleSwitchOn : ''}`}
+                    onClick={() => setAiEnabled(!aiEnabled)}
                   >
-                    ON
-                  </button>
-                  <button
-                    type="button"
-                    role="switch"
-                    aria-checked={!aiEnabled}
-                    aria-label="Disable AI Overview"
-                    className={`${styles.segmentBtn} ${!aiEnabled ? styles.segmentBtnActive : ''}`}
-                    onClick={() => setAiEnabled(false)}
-                  >
-                    OFF
+                    <span className={styles.appleSwitchThumb} />
                   </button>
                 </div>
               </div>
@@ -860,40 +1344,52 @@ export function SettingsPanel({ isOpen, onClose }: SettingsPanelProps) {
             </div>
           )}
 
+          {/* ==========================================================
+              4. SEARCH TAB
+             ========================================================== */}
           {activeTab === 'search' && (
             <div className={styles.settingsSection}>
+              {/* SafeSearch — Apple Segmented Control */}
               <div className={styles.settingItem}>
-                <label htmlFor="setting-safesearch" className={styles.settingLabel}>
+                <label className={styles.settingLabel}>
                   SafeSearch Content Filtering
                 </label>
-                <select
-                  id="setting-safesearch"
-                  className={styles.settingSelect}
-                  value={safeSearch}
-                  onChange={(e) => applySafeSearch(e.target.value)}
-                >
-                  <option value="0">Off (Strict filtering disabled)</option>
-                  <option value="1">Moderate (Filter explicit thumbnails/links)</option>
-                  <option value="2">Strict (Aggressive adult filter)</option>
-                </select>
+                <div className={styles.appleSegmentTrack}>
+                  {[
+                    { id: '0', label: 'Off' },
+                    { id: '1', label: 'Moderate' },
+                    { id: '2', label: 'Strict' },
+                  ].map((opt) => (
+                    <button
+                      key={opt.id}
+                      type="button"
+                      className={`${styles.appleSegmentItem} ${safeSearch === opt.id ? styles.appleSegmentActive : ''}`}
+                      onClick={() => applySafeSearch(opt.id)}
+                    >
+                      {opt.label}
+                    </button>
+                  ))}
+                </div>
                 <span className={styles.settingDesc}>
                   Controls explicit material filtering forwarded to search engine backends.
                 </span>
               </div>
 
+              {/* Autocomplete — Apple Switch */}
               <div className={styles.settingItem}>
                 <label className={styles.settingLabel}>Autocomplete Query Predictions</label>
-                <div className={styles.toggleRow}>
-                  <input
-                    type="checkbox"
-                    id="toggle-autocomplete"
-                    className={styles.checkboxInput}
-                    checked={autocompleteEnabled}
-                    onChange={(e) => applyAutocomplete(e.target.checked)}
-                  />
-                  <label htmlFor="toggle-autocomplete" className={styles.checkboxLabel}>
-                    Fetch real-time OpenSearch predictions while typing
-                  </label>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.65rem 0.85rem', backgroundColor: 'var(--glass-surface)', border: '1px solid var(--glass-border)', borderRadius: 'var(--radius-sm)', marginTop: '0.45rem' }}>
+                  <span style={{ fontSize: '0.86rem', color: 'var(--text)' }}>Real-time search suggestions</span>
+                  <button
+                    type="button"
+                    role="switch"
+                    aria-checked={autocompleteEnabled}
+                    aria-label="Toggle Autocomplete Predictions"
+                    className={`${styles.appleSwitch} ${autocompleteEnabled ? styles.appleSwitchOn : ''}`}
+                    onClick={() => applyAutocomplete(!autocompleteEnabled)}
+                  >
+                    <span className={styles.appleSwitchThumb} />
+                  </button>
                 </div>
                 <span className={styles.settingDesc}>
                   Queries OpenSearch suggestions anonymously via the self-hosted SIFT instance.
@@ -902,6 +1398,9 @@ export function SettingsPanel({ isOpen, onClose }: SettingsPanelProps) {
             </div>
           )}
 
+          {/* ==========================================================
+              5. PROVIDERS TAB
+             ========================================================== */}
           {activeTab === 'providers' && (
             <div className={styles.settingsSection}>
               <div className={styles.settingItem}>
@@ -972,6 +1471,9 @@ export function SettingsPanel({ isOpen, onClose }: SettingsPanelProps) {
             </div>
           )}
 
+          {/* ==========================================================
+              6. MAPS TAB
+             ========================================================== */}
           {activeTab === 'maps' && (
             <div className={styles.settingsSection}>
               <div className={styles.settingItem}>
@@ -995,39 +1497,24 @@ export function SettingsPanel({ isOpen, onClose }: SettingsPanelProps) {
                 </span>
               </div>
 
+              {/* Location Permission Mode — Apple Segmented Control */}
               <div className={styles.settingItem}>
                 <label className={styles.settingLabel}>Location Permission Mode</label>
-                <div className={styles.radioGroup}>
-                  <label className={styles.radioOption}>
-                    <input
-                      type="radio"
-                      name="locationMode"
-                      value="never"
-                      checked={locationMode === 'never'}
-                      onChange={() => applyLocationMode('never')}
-                    />
-                    <span>Never (Default: Never ask or use geolocation)</span>
-                  </label>
-                  <label className={styles.radioOption}>
-                    <input
-                      type="radio"
-                      name="locationMode"
-                      value="ask"
-                      checked={locationMode === 'ask'}
-                      onChange={() => applyLocationMode('ask')}
-                    />
-                    <span>Ask when needed (Prompt on local queries like &quot;near me&quot;)</span>
-                  </label>
-                  <label className={styles.radioOption}>
-                    <input
-                      type="radio"
-                      name="locationMode"
-                      value="allow"
-                      checked={locationMode === 'allow'}
-                      onChange={() => applyLocationMode('allow')}
-                    />
-                    <span>Allow (Request browser geolocation for map queries)</span>
-                  </label>
+                <div className={styles.appleSegmentTrack}>
+                  {[
+                    { id: 'never', label: 'Never' },
+                    { id: 'ask', label: 'Ask When Needed' },
+                    { id: 'allow', label: 'Always Allow' },
+                  ].map((mode) => (
+                    <button
+                      key={mode.id}
+                      type="button"
+                      className={`${styles.appleSegmentItem} ${locationMode === mode.id ? styles.appleSegmentActive : ''}`}
+                      onClick={() => applyLocationMode(mode.id as 'never' | 'ask' | 'allow')}
+                    >
+                      {mode.label}
+                    </button>
+                  ))}
                 </div>
                 <span className={styles.settingDesc}>
                   SIFT never silently tracks coordinates. Coordinates are held in volatile session memory only.
@@ -1036,12 +1523,15 @@ export function SettingsPanel({ isOpen, onClose }: SettingsPanelProps) {
             </div>
           )}
 
+          {/* ==========================================================
+              7. PRIVACY TAB
+             ========================================================== */}
           {activeTab === 'privacy' && (
             <div className={styles.privacyContent}>
               <div className={styles.privacyBlock}>
                 <h4>Zero-Log Local-First Architecture</h4>
                 <p>
-                  SIFT runs without tracking cookies, advertising analytics, remote user profiles, or cloud synchronization. All appearance configurations and custom wallpapers are stored locally on this device.
+                  SIFT runs without tracking cookies, advertising analytics, remote user profiles, or cloud synchronization. All appearance configurations, spatial home modules, and custom wallpapers are stored locally on this device.
                 </p>
               </div>
 
