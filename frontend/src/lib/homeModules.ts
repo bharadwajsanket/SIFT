@@ -66,7 +66,7 @@ export const DEFAULT_HOME_CONFIG: SiftHomeConfig = {
       city: '',
     },
     recentSearches: {
-      enabled: false,
+      enabled: true,
       zone: 'bottom-left',
       maxItems: 5,
     },

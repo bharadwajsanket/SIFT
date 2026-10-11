@@ -351,47 +351,82 @@ export function applyAppearanceToDOM(
 
   // Glass / Matte Material Tokens
   if (config.visualStyle === 'matte') {
-    if (effectiveTheme === 'dark') {
-      root.style.setProperty('--glass-surface', '#14151e');
-      root.style.setProperty('--glass-surface-hover', '#1c1e2a');
-      root.style.setProperty('--glass-surface-active', '#242738');
-      root.style.setProperty('--glass-surface-subtle', '#101118');
-      root.style.setProperty('--glass-border', 'rgba(255, 255, 255, 0.08)');
-      root.style.setProperty('--glass-border-strong', 'rgba(255, 255, 255, 0.14)');
-      root.style.setProperty('--glass-border-subtle', 'rgba(255, 255, 255, 0.04)');
-    } else {
-      root.style.setProperty('--glass-surface', '#ffffff');
-      root.style.setProperty('--glass-surface-hover', '#f8fafc');
-      root.style.setProperty('--glass-surface-active', '#f1f5f9');
-      root.style.setProperty('--glass-surface-subtle', '#f1f5f9');
-      root.style.setProperty('--glass-border', '#e2e8f0');
-      root.style.setProperty('--glass-border-strong', '#cbd5e1');
-      root.style.setProperty('--glass-border-subtle', '#f1f5f9');
-    }
+    root.style.setProperty('--accent-glow', 'transparent');
     root.style.setProperty('--glass-blur', '0px');
-  } else {
+    root.style.setProperty('--glass-highlight', 'none');
+
     if (effectiveTheme === 'dark') {
+      root.style.setProperty('--bg-base', '#0e0f15');
+      root.style.setProperty('--glass-surface', '#15161e');
+      root.style.setProperty('--glass-surface-hover', '#1b1c26');
+      root.style.setProperty('--glass-surface-active', '#222430');
+      root.style.setProperty('--glass-surface-subtle', '#111218');
+      root.style.setProperty('--glass-border', 'rgba(255, 255, 255, 0.07)');
+      root.style.setProperty('--glass-border-strong', 'rgba(255, 255, 255, 0.12)');
+      root.style.setProperty('--glass-border-subtle', 'rgba(255, 255, 255, 0.04)');
+      root.style.setProperty('--glass-border-focus', `${accentColor}70`);
+      root.style.setProperty('--border', 'rgba(255, 255, 255, 0.07)');
+      root.style.setProperty('--border-strong', 'rgba(255, 255, 255, 0.12)');
+      root.style.setProperty('--glass-shadow', '0 1px 3px rgba(0, 0, 0, 0.35)');
+      root.style.setProperty('--glass-shadow-sm', '0 1px 2px rgba(0, 0, 0, 0.25)');
+      root.style.setProperty('--glass-shadow-popover', '0 8px 24px -4px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(255, 255, 255, 0.08)');
+      root.style.setProperty('--accent-surface', `${accentColor}14`);
+      root.style.setProperty('--accent-border', `${accentColor}38`);
+    } else {
+      root.style.setProperty('--bg-base', '#f8f9fb');
+      root.style.setProperty('--glass-surface', '#ffffff');
+      root.style.setProperty('--glass-surface-hover', '#f4f5f8');
+      root.style.setProperty('--glass-surface-active', '#eceef2');
+      root.style.setProperty('--glass-surface-subtle', '#f5f6f9');
+      root.style.setProperty('--glass-border', '#e2e4ea');
+      root.style.setProperty('--glass-border-strong', '#d1d4de');
+      root.style.setProperty('--glass-border-subtle', '#eceef2');
+      root.style.setProperty('--glass-border-focus', `${accentColor}66`);
+      root.style.setProperty('--border', '#e2e4ea');
+      root.style.setProperty('--border-strong', '#d1d4de');
+      root.style.setProperty('--glass-shadow', '0 1px 3px rgba(0, 0, 0, 0.05)');
+      root.style.setProperty('--glass-shadow-sm', '0 1px 2px rgba(0, 0, 0, 0.03)');
+      root.style.setProperty('--glass-shadow-popover', '0 8px 24px -4px rgba(0, 0, 0, 0.08), 0 0 0 1px #e2e4ea');
+      root.style.setProperty('--accent-surface', `${accentColor}10`);
+      root.style.setProperty('--accent-border', `${accentColor}30`);
+    }
+  } else {
+    root.style.setProperty('--glass-highlight', effectiveTheme === 'dark' ? 'inset 0 1px 0 0 rgba(255, 255, 255, 0.09)' : 'inset 0 1px 0 0 rgba(255, 255, 255, 0.9)');
+    root.style.setProperty('--accent-glow', `${accentColor}40`);
+    root.style.setProperty('--accent-surface', `${accentColor}1f`);
+    root.style.setProperty('--accent-border', `${accentColor}47`);
+
+    if (effectiveTheme === 'dark') {
+      root.style.setProperty('--bg-base', '#090a10');
       root.style.setProperty('--glass-surface', `rgba(18, 16, 28, ${config.glassOpacity})`);
       root.style.setProperty('--glass-surface-hover', `rgba(26, 22, 40, ${Math.min(0.98, config.glassOpacity + 0.14)})`);
       root.style.setProperty('--glass-surface-active', `rgba(35, 30, 54, ${Math.min(1, config.glassOpacity + 0.24)})`);
       root.style.setProperty('--glass-border', `rgba(255, 255, 255, ${(0.08 * config.borderIntensity).toFixed(3)})`);
       root.style.setProperty('--glass-border-strong', `rgba(255, 255, 255, ${(0.14 * config.borderIntensity).toFixed(3)})`);
       root.style.setProperty('--glass-border-subtle', `rgba(255, 255, 255, ${(0.05 * config.borderIntensity).toFixed(3)})`);
+      root.style.setProperty('--border', '#232033');
+      root.style.setProperty('--border-strong', '#322d48');
+      root.style.setProperty('--glass-shadow', '0 12px 36px -4px rgba(0, 0, 0, 0.5), 0 2px 8px -1px rgba(0, 0, 0, 0.35)');
+      root.style.setProperty('--glass-shadow-sm', '0 4px 16px -2px rgba(0, 0, 0, 0.35)');
+      root.style.setProperty('--glass-shadow-popover', '0 20px 48px -6px rgba(0, 0, 0, 0.75), 0 0 0 1px rgba(255, 255, 255, 0.14)');
     } else {
+      root.style.setProperty('--bg-base', '#f1f3f8');
       root.style.setProperty('--glass-surface', `rgba(255, 255, 255, ${Math.min(0.95, config.glassOpacity + 0.2)})`);
       root.style.setProperty('--glass-surface-hover', `rgba(255, 255, 255, ${Math.min(1, config.glassOpacity + 0.3)})`);
       root.style.setProperty('--glass-surface-active', `#ffffff`);
       root.style.setProperty('--glass-border', `rgba(0, 0, 0, ${(0.08 * config.borderIntensity).toFixed(3)})`);
       root.style.setProperty('--glass-border-strong', `rgba(0, 0, 0, ${(0.14 * config.borderIntensity).toFixed(3)})`);
       root.style.setProperty('--glass-border-subtle', `rgba(0, 0, 0, ${(0.04 * config.borderIntensity).toFixed(3)})`);
+      root.style.setProperty('--border', '#e2e8f0');
+      root.style.setProperty('--border-strong', '#cbd5e1');
+      root.style.setProperty('--glass-shadow', '0 10px 30px -4px rgba(0, 0, 0, 0.08), 0 2px 6px -1px rgba(0, 0, 0, 0.04)');
+      root.style.setProperty('--glass-shadow-sm', '0 4px 12px -2px rgba(0, 0, 0, 0.05)');
+      root.style.setProperty('--glass-shadow-popover', '0 20px 40px -6px rgba(0, 0, 0, 0.15), 0 0 0 1px rgba(0, 0, 0, 0.14)');
     }
     root.style.setProperty('--glass-blur', `${config.glassBlur}px`);
+    root.style.setProperty('--glass-border-focus', `${accentColor}88`);
   }
-  root.style.setProperty('--glass-border-focus', `${accentColor}88`);
 
   // Accent Tokens
   root.style.setProperty('--accent', accentColor);
-  root.style.setProperty('--accent-surface', `${accentColor}1f`);
-  root.style.setProperty('--accent-border', `${accentColor}47`);
-  root.style.setProperty('--accent-glow', `${accentColor}40`);
 }

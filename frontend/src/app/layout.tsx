@@ -91,17 +91,44 @@ export default function RootLayout({
                       root.style.setProperty('--overlay-scrim', 'rgba(8, 7, 15, ' + d + ')');
                       root.style.setProperty('--overlay-gradient', 'linear-gradient(180deg, rgba(9, 10, 16, ' + Math.max(0, d - 0.2) + ') 0%, rgba(9, 10, 16, ' + d + ') 45%, rgba(8, 7, 15, ' + Math.min(1, d + 0.35) + ') 100%)');
                     }
-                    if (typeof cfg.glassOpacity === 'number') {
-                      root.style.setProperty('--glass-surface', 'rgba(18, 16, 28, ' + cfg.glassOpacity + ')');
-                    }
-                    if (typeof cfg.glassBlur === 'number') {
-                      root.style.setProperty('--glass-blur', cfg.glassBlur + 'px');
+                    if (visualStyle === 'matte') {
+                      root.style.setProperty('--accent-glow', 'transparent');
+                      root.style.setProperty('--glass-blur', '0px');
+                      root.style.setProperty('--glass-highlight', 'none');
+                      if (theme === 'dark') {
+                        root.style.setProperty('--bg-base', '#0e0f15');
+                        root.style.setProperty('--glass-surface', '#15161e');
+                        root.style.setProperty('--glass-surface-hover', '#1b1c26');
+                        root.style.setProperty('--glass-surface-active', '#222430');
+                        root.style.setProperty('--glass-border', 'rgba(255, 255, 255, 0.07)');
+                        root.style.setProperty('--glass-border-strong', 'rgba(255, 255, 255, 0.12)');
+                        root.style.setProperty('--border', 'rgba(255, 255, 255, 0.07)');
+                        root.style.setProperty('--border-strong', 'rgba(255, 255, 255, 0.12)');
+                      } else {
+                        root.style.setProperty('--bg-base', '#f8f9fb');
+                        root.style.setProperty('--glass-surface', '#ffffff');
+                        root.style.setProperty('--glass-surface-hover', '#f4f5f8');
+                        root.style.setProperty('--glass-surface-active', '#eceef2');
+                        root.style.setProperty('--glass-border', '#e2e4ea');
+                        root.style.setProperty('--glass-border-strong', '#d1d4de');
+                        root.style.setProperty('--border', '#e2e4ea');
+                        root.style.setProperty('--border-strong', '#d1d4de');
+                      }
+                    } else {
+                      if (typeof cfg.glassOpacity === 'number') {
+                        root.style.setProperty('--glass-surface', 'rgba(18, 16, 28, ' + cfg.glassOpacity + ')');
+                      }
+                      if (typeof cfg.glassBlur === 'number') {
+                        root.style.setProperty('--glass-blur', cfg.glassBlur + 'px');
+                      }
                     }
                     if (cfg.accentColor) {
                       root.style.setProperty('--accent', cfg.accentColor);
                       root.style.setProperty('--accent-surface', cfg.accentColor + '1f');
                       root.style.setProperty('--accent-border', cfg.accentColor + '47');
-                      root.style.setProperty('--accent-glow', cfg.accentColor + '40');
+                      if (visualStyle !== 'matte') {
+                        root.style.setProperty('--accent-glow', cfg.accentColor + '40');
+                      }
                     }
                   }
                 } catch (e) {}

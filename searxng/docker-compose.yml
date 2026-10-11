@@ -35,7 +35,7 @@ services:
 
   core:
     container_name: searxng-core
-    image: docker.io/searxng/searxng:${SEARXNG_VERSION:-2026.8.29-d226b78bc}
+    image: docker.io/searxng/searxng:${SEARXNG_VERSION:-2026.10.9-f4822b3fc}
     restart: unless-stopped
     ports:
       - "127.0.0.1:${SEARXNG_PORT:-8080}:8080"

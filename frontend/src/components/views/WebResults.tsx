@@ -26,6 +26,12 @@ export function WebResults({ results, selectedResult, onSelectResult }: WebResul
             onClick={() => onSelectResult(item)}
             role="button"
             tabIndex={0}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                onSelectResult(item);
+              }
+            }}
           >
             <div className={styles.metaRow}>
               <span className={styles.domainDot} aria-hidden="true" />

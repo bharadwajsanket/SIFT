@@ -235,6 +235,7 @@
 
 .atmosphericCard,
 .moduleCard {
+  position: relative;
   background-color: var(--glass-surface);
   border: 1px solid var(--glass-border);
   border-radius: var(--radius-md);
@@ -244,6 +245,86 @@
   box-shadow: var(--glass-shadow-sm);
   transition: all var(--transition-fast);
   box-sizing: border-box;
+}
+
+/* Module dismissal button (Restrained close icon in top-right corner) */
+.moduleDismissBtn {
+  position: absolute;
+  top: 0.45rem;
+  right: 0.45rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  min-width: 26px;
+  min-height: 26px;
+  padding: 0;
+  border-radius: var(--radius-xs);
+  color: var(--text-muted);
+  background: transparent;
+  border: 1px solid transparent;
+  cursor: pointer;
+  opacity: 0.35;
+  transition: opacity var(--transition-fast), color var(--transition-fast), background-color var(--transition-fast), border-color var(--transition-fast);
+  z-index: 5;
+}
+
+.atmosphericCard:hover .moduleDismissBtn,
+.moduleDismissBtn:hover,
+.moduleDismissBtn:focus-visible {
+  opacity: 1;
+  color: var(--text);
+  background-color: var(--glass-surface-subtle);
+  border-color: var(--glass-border-subtle);
+}
+
+.moduleDismissBtn:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+/* Touch devices: Must remain accessible and visible without hover */
+@media (hover: none) {
+  .moduleDismissBtn {
+    opacity: 0.7;
+    width: 32px;
+    height: 32px;
+    min-width: 32px;
+    min-height: 32px;
+  }
+}
+
+/* Compact pill dismiss button */
+.compactDismissBtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  min-width: 22px;
+  min-height: 22px;
+  padding: 0;
+  margin-left: 0.25rem;
+  border-radius: var(--radius-pill);
+  color: var(--text-dim);
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  opacity: 0.6;
+  transition: opacity var(--transition-fast), color var(--transition-fast), background-color var(--transition-fast);
+}
+
+.compactDismissBtn:hover,
+.compactDismissBtn:focus-visible {
+  opacity: 1;
+  color: var(--text);
+  background-color: var(--glass-surface-subtle);
+}
+
+.compactDismissBtn:focus-visible {
+  outline: 1.5px solid var(--accent);
+  outline-offset: 1px;
 }
 
 .atmosphericCard:hover,
@@ -486,12 +567,52 @@
   flex-shrink: 0;
 }
 
-.recentItemRow:hover .recentItemDelete {
+.recentDeleteBtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.15rem;
+  color: var(--text-muted);
+  opacity: 0.5;
+  border-radius: var(--radius-xs);
+  transition: all var(--transition-fast);
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.recentItemRow:hover .recentDeleteBtn {
   opacity: 1;
 }
 
-.recentItemDelete:hover {
+.recentDeleteBtn:hover {
   color: var(--error);
+}
+
+.recentEmptyState {
+  padding: 0.85rem 0.5rem;
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  text-align: center;
+}
+
+.recentFooterLink {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.25rem;
+  font-size: 0.72rem;
+  font-weight: 500;
+  color: var(--text-dim);
+  text-decoration: none;
+  margin-top: 0.5rem;
+  padding: 0.2rem 0;
+  transition: color var(--transition-fast);
+}
+
+.recentFooterLink:hover {
+  color: var(--accent);
 }
 
 /* 5. Shortcuts */
@@ -608,6 +729,16 @@
   border-color: var(--glass-border-focus);
   background-color: var(--glass-surface-active);
   box-shadow: var(--glass-shadow), 0 0 0 3px var(--accent-surface), 0 0 24px -2px var(--accent-glow);
+}
+
+.inputGroupActiveCalc {
+  border-bottom-left-radius: 0 !important;
+  border-bottom-right-radius: 0 !important;
+  border-bottom-color: var(--glass-border-subtle) !important;
+}
+
+:global(html[data-visual-style="matte"]) .inputGroupActiveCalc {
+  border-bottom-color: var(--border) !important;
 }
 
 .searchIcon {
@@ -783,38 +914,169 @@
   font-weight: 600;
 }
 
-/* Status Row */
-.statusPillsRow {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.75rem;
-  font-size: 0.72rem;
-  font-family: var(--font-mono);
-  color: var(--text-muted);
+/* ==========================================================================
+   Matte Refinements: Restrained, Calm, Minimal, Deliberate Visual Hierarchy
+   ========================================================================== */
+
+:global(html[data-visual-style="matte"]) .topBar {
+  padding: 1.25rem 2.5rem;
+}
+
+:global(html[data-visual-style="matte"]) .brandTitle {
+  font-size: 0.95rem;
+  font-weight: 600;
   letter-spacing: 0.08em;
-  user-select: none;
-  opacity: 0.8;
-  margin-top: 0.25rem;
+  color: var(--text);
+  opacity: 1;
 }
 
-.statusPill {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.35rem;
+:global(html[data-visual-style="matte"]) .settingsIconBtn {
+  background-color: var(--glass-surface);
+  border: 1px solid var(--border);
+  box-shadow: none;
+  transform: none;
 }
 
-.statusDot {
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background-color: var(--success);
-  box-shadow: 0 0 8px var(--success);
+:global(html[data-visual-style="matte"]) .settingsIconBtn:hover {
+  border-color: var(--border-strong);
+  background-color: var(--surface-hover);
+  transform: none;
 }
 
-.statusDivider {
+/* Central Search Input */
+:global(html[data-visual-style="matte"]) .inputGroup {
+  background-color: var(--glass-surface);
+  border: 1px solid var(--border-strong);
+  box-shadow: var(--glass-shadow-sm);
+  border-radius: 12px;
+  padding: 0.8rem 1.15rem;
+}
+
+:global(html[data-visual-style="matte"]) .inputGroup:hover {
+  border-color: var(--border-focus);
+  background-color: var(--surface);
+}
+
+:global(html[data-visual-style="matte"]) .inputGroup:focus-within {
+  border-color: var(--accent);
+  background-color: var(--surface);
+  box-shadow: 0 0 0 3px var(--accent-surface);
+}
+
+:global(html[data-visual-style="matte"]) .searchIcon {
+  color: var(--accent);
+  opacity: 0.85;
+}
+
+:global(html[data-visual-style="matte"]) .keyboardHint {
+  border: 1px solid var(--border);
+  background-color: var(--surface-subtle);
   color: var(--text-dim);
-  opacity: 0.5;
+  opacity: 0.9;
+}
+
+:global(html[data-visual-style="matte"]) .searchSubmitAction {
+  background-color: var(--accent-surface);
+  border: 1px solid var(--accent-border);
+  color: var(--accent);
+}
+
+:global(html[data-visual-style="matte"]) .searchSubmitAction:hover {
+  background-color: var(--accent);
+  color: #ffffff;
+  transform: none;
+}
+
+/* Category Navigation */
+:global(html[data-visual-style="matte"]) .categoryNav {
+  gap: 0.35rem;
+  margin-bottom: 1.5rem;
+}
+
+:global(html[data-visual-style="matte"]) .categoryTab {
+  font-size: 0.82rem;
+  font-weight: 500;
+  color: var(--text-muted);
+  border-radius: var(--radius-sm);
+  border: 1px solid transparent;
+  padding: 0.35rem 0.75rem;
+}
+
+:global(html[data-visual-style="matte"]) .categoryTab:hover {
+  color: var(--text);
+  background-color: var(--surface-hover);
+  border-color: transparent;
+}
+
+:global(html[data-visual-style="matte"]) .categoryTabActive {
+  color: var(--accent);
+  background-color: var(--accent-surface);
+  border-color: var(--accent-border);
+  box-shadow: none;
+  font-weight: 600;
+}
+
+/* Atmospheric & Module Cards */
+:global(html[data-visual-style="matte"]) .atmosphericCard,
+:global(html[data-visual-style="matte"]) .moduleCard {
+  background-color: var(--glass-surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  box-shadow: var(--glass-shadow-sm);
+}
+
+:global(html[data-visual-style="matte"]) .atmosphericCard:hover,
+:global(html[data-visual-style="matte"]) .moduleCard:hover {
+  border-color: var(--border-strong);
+  background-color: var(--surface-hover);
+}
+
+:global(html[data-visual-style="matte"]) .clockAmPmBadge {
+  background-color: var(--surface-subtle);
+  border: 1px solid var(--border);
+  color: var(--accent);
+}
+
+:global(html[data-visual-style="matte"]) .clockTzBadge {
+  background-color: var(--surface-subtle);
+  border: 1px solid var(--border);
+  color: var(--text-dim);
+}
+
+/* Autocomplete Dropdown */
+:global(html[data-visual-style="matte"]) .suggestionsDropdown {
+  background-color: var(--surface);
+  border: 1px solid var(--border-strong);
+  box-shadow: var(--glass-shadow-popover);
+  border-radius: 12px;
+}
+
+:global(html[data-visual-style="matte"]) .suggestionRowActive,
+:global(html[data-visual-style="matte"]) .suggestionRow:hover {
+  background-color: var(--surface-hover);
+  color: var(--text);
+}
+
+/* Mobile Ambient Capsule */
+:global(html[data-visual-style="matte"]) .ambientCapsule {
+  background-color: var(--glass-surface);
+  border: 1px solid var(--border);
+  box-shadow: none;
+}
+
+:global(html[data-visual-style="matte"]) .ambientCapsule:hover {
+  border-color: var(--border-strong);
+  background-color: var(--surface-hover);
+}
+
+/* Footer in Matte */
+:global(html[data-visual-style="matte"]) .footer {
+  border-top: 1px solid var(--border);
+}
+
+:global(html[data-visual-style="matte"]) .footerBrand {
+  color: var(--text-dim);
+  font-weight: 500;
 }
 
 /* Footer */
@@ -1842,10 +2104,6 @@
     padding: 0.5rem 0;
   }
 
-  .statusPillsRow {
-    display: none;
-  }
-
   .mobileAmbientCapsuleRow {
     display: flex;
     justify-content: center;
@@ -1908,9 +2166,6 @@
     padding: 0.35rem 0.65rem;
     font-size: 0.82rem;
   }
-  .statusPillsRow {
-    display: none;
-  }
   .shortcutsGrid {
     grid-template-columns: 1fr;
   }
@@ -1949,9 +2204,6 @@
 }
 
 @media (max-width: 380px) {
-  .topBrand .brandSubtitle {
-    display: none;
-  }
   .categoryTab {
     padding: 0.3rem 0.55rem;
     font-size: 0.78rem;

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useRef, Suspense, useCallback } from 'react';
+import React, { useState, useEffect, useRef, Suspense, useCallback, useMemo } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { SiftResult } from '@/app/api/search/route';
 import { SiftLogo } from '@/components/SiftLogo';
@@ -8,6 +8,7 @@ import {
   SearchIcon, 
   SettingsIcon, 
   CloseIcon, 
+  ClockIcon,
   GlobeIcon, 
   ImageIcon, 
   VideoIcon, 
@@ -31,6 +32,9 @@ import { SettingsPanel } from '@/components/SettingsPanel';
 import { LocationPrompt } from '@/components/LocationPrompt';
 import { ImageLightbox } from '@/components/ImageLightbox';
 import { AIOverview } from '@/components/AIOverview';
+import { evaluateCalculatorExpression, isCalculatorQuery } from '@/lib/calculator';
+import { CalculatorPreview } from '@/components/CalculatorPreview';
+import { recordSearch } from '@/lib/searchHistory';
 import styles from './search.module.css';
 
 const CATEGORIES = [
@@ -82,11 +86,15 @@ function SearchController() {
   const [suggestions, setSuggestions] = useState<string[]>([]);
   const [activeSuggestion, setActiveSuggestion] = useState(-1);
   const [showSuggestions, setShowSuggestions] = useState(false);
+  const [isCopied, setIsCopied] = useState(false);
 
   const searchInputRef = useRef<HTMLInputElement>(null);
   const searchBoxRef = useRef<HTMLDivElement>(null);
   const categoryBarRef = useRef<HTMLElement>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
+
+  // Evaluate inline calculator expression locally (zero network requests)
+  const calculatorResult = useMemo(() => evaluateCalculatorExpression(searchInput), [searchInput]);
 
   // Sync params from URL
   useEffect(() => {
@@ -94,6 +102,9 @@ function SearchController() {
     setSearchInput(queryParam);
     setCategory(categoryParam);
     setPage(1);
+    if (queryParam) {
+      recordSearch(queryParam, categoryParam || 'general');
+    }
 
     // Auto scroll active category tab into view on mobile
     if (categoryBarRef.current) {
@@ -217,13 +228,13 @@ function SearchController() {
   // Header autocomplete
   useEffect(() => {
     const fetchPredictions = async () => {
-      if (!searchInput.trim()) {
-        setSuggestions([]);
-        return;
-      }
-
       if (abortControllerRef.current) {
         abortControllerRef.current.abort();
+      }
+
+      if (!searchInput.trim() || isCalculatorQuery(searchInput)) {
+        setSuggestions([]);
+        return;
       }
 
       const controller = new AbortController();
@@ -291,13 +302,8 @@ function SearchController() {
     setShowSuggestions(false);
     setQuery(trimmed);
 
-    // Save recent searches
-    try {
-      const stored = localStorage.getItem('sift-recent-searches');
-      const list = stored ? JSON.parse(stored) : [];
-      const updated = [trimmed, ...list.filter((q: string) => q.toLowerCase() !== trimmed.toLowerCase())].slice(0, 6);
-      localStorage.setItem('sift-recent-searches', JSON.stringify(updated));
-    } catch {}
+    // Save search history
+    recordSearch(trimmed, category);
 
     const params = new URLSearchParams();
     params.set('q', trimmed);
@@ -318,20 +324,37 @@ function SearchController() {
   };
 
   const handleInputKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'ArrowDown') {
-      e.preventDefault();
-      setShowSuggestions(true);
-      setActiveSuggestion((prev) => (prev < suggestions.length - 1 ? prev + 1 : 0));
-    } else if (e.key === 'ArrowUp') {
-      e.preventDefault();
-      setShowSuggestions(true);
-      setActiveSuggestion((prev) => (prev > 0 ? prev - 1 : suggestions.length - 1));
-    } else if (e.key === 'Enter') {
+    if (e.key === 'Enter') {
+      if (calculatorResult) {
+        if (e.shiftKey) {
+          setShowSuggestions(false);
+          handleSearchSubmit(searchInput);
+          return;
+        }
+        e.preventDefault();
+        setIsCopied(true);
+        if (typeof navigator !== 'undefined' && navigator.clipboard) {
+          navigator.clipboard.writeText(calculatorResult.formattedResult).catch(() => {});
+        }
+        return;
+      }
       if (activeSuggestion >= 0 && activeSuggestion < suggestions.length) {
         e.preventDefault();
         const selected = suggestions[activeSuggestion];
         setSearchInput(selected);
         handleSearchSubmit(selected);
+      }
+    } else if (e.key === 'ArrowDown') {
+      if (!calculatorResult) {
+        e.preventDefault();
+        setShowSuggestions(true);
+        setActiveSuggestion((prev) => (prev < suggestions.length - 1 ? prev + 1 : 0));
+      }
+    } else if (e.key === 'ArrowUp') {
+      if (!calculatorResult) {
+        e.preventDefault();
+        setShowSuggestions(true);
+        setActiveSuggestion((prev) => (prev > 0 ? prev - 1 : suggestions.length - 1));
       }
     } else if (e.key === 'Escape') {
       setShowSuggestions(false);
@@ -366,13 +389,35 @@ function SearchController() {
     <div className={styles.searchContainer}>
       <header className={styles.header}>
         <div className={styles.headerTop}>
-          <div className={styles.brand} onClick={() => router.push('/')} title="Return to SIFT Home" role="button" tabIndex={0}>
+          <div 
+            className={styles.brand} 
+            onClick={() => router.push('/')} 
+            title="Return to SIFT Home" 
+            role="button" 
+            tabIndex={0}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                router.push('/');
+              }
+            }}
+          >
             <SiftLogo markSize={28} variant="lavender" />
           </div>
 
           <div className={styles.searchFormWrapper} ref={searchBoxRef}>
-            <form onSubmit={(e) => { e.preventDefault(); handleSearchSubmit(searchInput); }}>
-              <div className={styles.inputGroup}>
+            <form onSubmit={(e) => {
+              e.preventDefault();
+              if (calculatorResult) {
+                setIsCopied(true);
+                if (typeof navigator !== 'undefined' && navigator.clipboard) {
+                  navigator.clipboard.writeText(calculatorResult.formattedResult).catch(() => {});
+                }
+                return;
+              }
+              handleSearchSubmit(searchInput);
+            }}>
+              <div className={`${styles.inputGroup} ${calculatorResult ? styles.inputGroupActiveCalc : ''}`}>
                 <SearchIcon size={16} className={styles.searchIcon} />
                 <input
                   ref={searchInputRef}
@@ -406,13 +451,32 @@ function SearchController() {
                   </button>
                 )}
 
-                <button type="submit" className={styles.searchSubmitBtn} aria-label="Submit search">
+                <button 
+                  type="submit" 
+                  className={styles.searchSubmitBtn} 
+                  aria-label="Submit search"
+                  onClick={() => {
+                    if (calculatorResult) {
+                      handleSearchSubmit(searchInput);
+                    }
+                  }}
+                >
                   <SearchIcon size={15} />
                 </button>
               </div>
             </form>
 
-            {showSuggestions && suggestions.length > 0 && (
+            {calculatorResult && (
+              <CalculatorPreview
+                calculation={calculatorResult}
+                onWebSearch={(q) => handleSearchSubmit(q)}
+                isCopied={isCopied}
+                onCopySuccess={() => setIsCopied(true)}
+                compact
+              />
+            )}
+
+            {!calculatorResult && showSuggestions && suggestions.length > 0 && (
               <ul className={styles.suggestionsDropdown} role="listbox">
                 {suggestions.map((item, idx) => (
                   <li
@@ -434,6 +498,15 @@ function SearchController() {
           </div>
 
           <div className={styles.headerActions}>
+            <button
+              type="button"
+              className={styles.iconBtn}
+              onClick={() => router.push('/history')}
+              title="Search History"
+              aria-label="Open search history"
+            >
+              <ClockIcon size={16} />
+            </button>
             <button
               type="button"
               className={styles.iconBtn}

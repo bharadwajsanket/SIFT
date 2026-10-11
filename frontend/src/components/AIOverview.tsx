@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { SparklesIcon, CopyIcon, CheckIcon, SendIcon } from '@/components/icons';
 import { useAI } from '@/context/AIContext';
+import { getCleanPlainText } from '@/lib/aiPlainText';
 import styles from '@/app/search/search.module.css';
 
 interface AIOverviewProps {
@@ -244,10 +245,55 @@ export function AIOverview({ query, category }: AIOverviewProps) {
   const [followUps, setFollowUps] = useState<ChatTurn[]>([]);
   const [followUpInput, setFollowUpInput] = useState('');
   const [isFollowUpStreaming, setIsFollowUpStreaming] = useState(false);
-
+  const [isOverviewCopied, setIsOverviewCopied] = useState(false);
+  const copyTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const activeAbortController = useRef<AbortController | null>(null);
   const followUpAbortController = useRef<AbortController | null>(null);
   const followUpInputRef = useRef<HTMLInputElement>(null);
+
+  // Clear timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (copyTimeoutRef.current) {
+        clearTimeout(copyTimeoutRef.current);
+      }
+    };
+  }, []);
+
+  const handleCopyOverview = async () => {
+    if (!responseContent.trim()) return;
+    const cleanText = getCleanPlainText(responseContent);
+
+    const triggerSuccess = () => {
+      setIsOverviewCopied(true);
+      if (copyTimeoutRef.current) clearTimeout(copyTimeoutRef.current);
+      copyTimeoutRef.current = setTimeout(() => setIsOverviewCopied(false), 2000);
+    };
+
+    try {
+      if (typeof navigator !== 'undefined' && navigator.clipboard && navigator.clipboard.writeText) {
+        await navigator.clipboard.writeText(cleanText);
+        triggerSuccess();
+      } else {
+        throw new Error('Clipboard API unavailable');
+      }
+    } catch {
+      // Fallback for restricted contexts (e.g. headless browsers, insecure origins)
+      try {
+        const textarea = document.createElement('textarea');
+        textarea.value = cleanText;
+        textarea.style.position = 'fixed';
+        textarea.style.opacity = '0';
+        document.body.appendChild(textarea);
+        textarea.select();
+        document.execCommand('copy');
+        document.body.removeChild(textarea);
+        triggerSuccess();
+      } catch (fallbackErr) {
+        console.warn('Failed to copy AI overview via fallback:', fallbackErr);
+      }
+    }
+  };
 
   // Trigger main standalone AI answer whenever query changes
   useEffect(() => {
@@ -443,7 +489,30 @@ export function AIOverview({ query, category }: AIOverviewProps) {
             <SparklesIcon size={14} className={styles.aiSparkleIcon} />
             <h2 className={styles.aiOverviewTitle}>AI Overview</h2>
           </div>
-          <div className={styles.aiBadgePill}>Local</div>
+          <div className={styles.aiHeaderActions}>
+            <div className={styles.aiBadgePill}>Local</div>
+            {(status === 'success' || status === 'streaming') && responseContent && (
+              <button
+                type="button"
+                className={styles.aiOverviewCopyBtn}
+                onClick={handleCopyOverview}
+                title="Copy AI overview"
+                aria-label={isOverviewCopied ? 'Copied AI overview to clipboard' : 'Copy AI overview to clipboard'}
+              >
+                {isOverviewCopied ? (
+                  <>
+                    <CheckIcon size={12} className={styles.aiCopyCheck} />
+                    <span>Copied</span>
+                  </>
+                ) : (
+                  <>
+                    <CopyIcon size={12} />
+                    <span>Copy</span>
+                  </>
+                )}
+              </button>
+            )}
+          </div>
         </div>
 
         {/* State: Loading */}

@@ -1,0 +1,219 @@
+/* SIFT Inline Calculator Preview Styles */
+
+.calculatorCard {
+  position: relative;
+  width: 100%;
+  box-sizing: border-box;
+  padding: 0.85rem 1.15rem;
+  background-color: var(--glass-surface-active);
+  border: 1px solid var(--glass-border-strong);
+  border-top: none;
+  border-radius: 0 0 16px 16px;
+  box-shadow: var(--glass-shadow-popover);
+  backdrop-filter: blur(28px);
+  -webkit-backdrop-filter: blur(28px);
+  animation: calcSlideDown 0.16s cubic-bezier(0.16, 1, 0.3, 1);
+  z-index: 10;
+}
+
+.compactCard {
+  padding: 0.65rem 0.95rem;
+  border-radius: 0 0 12px 12px;
+}
+
+/* Matte Visual Style Overrides */
+:global(html[data-visual-style="matte"]) .calculatorCard {
+  background-color: var(--surface);
+  border-color: var(--border);
+  box-shadow: 0 4px 16px -2px rgba(0, 0, 0, 0.25);
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+
+:global(html[data-visual-style="matte"][data-theme="light"]) .calculatorCard {
+  background-color: var(--surface);
+  border-color: var(--border);
+  box-shadow: 0 4px 14px -2px rgba(0, 0, 0, 0.08);
+}
+
+.cardHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 0.35rem;
+}
+
+.expressionText {
+  font-family: var(--font-mono);
+  font-size: 0.82rem;
+  color: var(--text-muted);
+  letter-spacing: -0.01em;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.copyBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.25rem 0.6rem;
+  font-family: var(--font-sans);
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: var(--text-secondary);
+  background-color: var(--glass-surface-subtle);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-xs);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  flex-shrink: 0;
+}
+
+:global(html[data-visual-style="matte"]) .copyBtn {
+  background-color: var(--surface-hover);
+  border-color: var(--border);
+}
+
+.copyBtn:hover {
+  color: var(--text);
+  border-color: var(--glass-border-focus);
+}
+
+.copyBtn:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+.copyBtnCopied {
+  color: var(--success);
+  border-color: rgba(52, 211, 153, 0.35);
+  background-color: rgba(52, 211, 153, 0.08);
+}
+
+.resultRow {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  margin-bottom: 0.45rem;
+  user-select: all;
+  cursor: pointer;
+}
+
+.resultValue {
+  font-family: var(--font-mono);
+  font-size: 1.6rem;
+  font-weight: 700;
+  letter-spacing: -0.025em;
+  color: var(--text);
+  line-height: 1.15;
+  word-break: break-all;
+}
+
+.footerActions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding-top: 0.45rem;
+  border-top: 1px solid var(--glass-border-subtle);
+}
+
+:global(html[data-visual-style="matte"]) .footerActions {
+  border-top-color: var(--border);
+}
+
+.enterHint {
+  font-size: 0.72rem;
+  color: var(--text-dim);
+  font-family: var(--font-sans);
+}
+
+.webSearchBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0;
+  background: transparent;
+  border: none;
+  font-size: 0.75rem;
+  font-family: var(--font-sans);
+  color: var(--text-muted);
+  cursor: pointer;
+  text-decoration: none;
+  transition: color var(--transition-fast);
+}
+
+.webSearchBtn:hover {
+  color: var(--accent);
+  text-decoration: underline;
+}
+
+.webSearchBtn:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  border-radius: var(--radius-xs);
+}
+
+/* Accessibility helper */
+.srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+@keyframes calcSlideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .calculatorCard {
+    animation: none;
+  }
+  .copyBtn, .webSearchBtn {
+    transition: none;
+  }
+}
+
+/* Responsive Breakpoints */
+@media (max-width: 640px) {
+  .calculatorCard {
+    padding: 0.65rem 0.85rem;
+    border-radius: 0 0 12px 12px;
+  }
+  .compactCard {
+    padding: 0.55rem 0.75rem;
+    border-radius: 0 0 8px 8px;
+  }
+  .resultValue {
+    font-size: 1.35rem;
+  }
+  .footerActions {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.35rem;
+  }
+}
+
+@media (max-width: 360px) {
+  .resultValue {
+    font-size: 1.15rem;
+  }
+  .webSearchBtn {
+    font-size: 0.7rem;
+  }
+}

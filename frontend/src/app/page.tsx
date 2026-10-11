@@ -1,32 +1,37 @@
 'use client';
 
-import React, { useState, useEffect, useRef, useTransition, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useTransition, useCallback, useMemo } from 'react';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { SiftLogo } from '@/components/SiftLogo';
 import { 
   SearchIcon, 
   SettingsIcon, 
   CloseIcon, 
+  ClockIcon,
   GlobeIcon, 
   ImageIcon, 
   VideoIcon, 
   NewsIcon, 
   CodeIcon, 
   AcademicIcon, 
-  MapIcon,
-  LayersIcon
+  MapIcon
 } from '@/components/icons';
 import { SettingsPanel } from '@/components/SettingsPanel';
 import { 
   SiftHomeConfig, 
   DEFAULT_HOME_CONFIG, 
   loadHomeConfig, 
+  saveHomeConfig, 
   HomeZone 
 } from '@/lib/homeModules';
 import { HomeClock } from '@/components/home/HomeClock';
 import { HomeWeather } from '@/components/home/HomeWeather';
 import { HomeRecentSearches } from '@/components/home/HomeRecentSearches';
 import { HomeShortcuts } from '@/components/home/HomeShortcuts';
+import { evaluateCalculatorExpression, isCalculatorQuery } from '@/lib/calculator';
+import { CalculatorPreview } from '@/components/CalculatorPreview';
+import { recordSearch } from '@/lib/searchHistory';
 import styles from './page.module.css';
 
 const CATEGORIES = [
@@ -46,26 +51,21 @@ export default function Home() {
   const [suggestions, setSuggestions] = useState<string[]>([]);
   const [activeSuggestion, setActiveSuggestion] = useState(-1);
   const [showSuggestions, setShowSuggestions] = useState(false);
-  const [recentSearches, setRecentSearches] = useState<string[]>([]);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [homeConfig, setHomeConfig] = useState<SiftHomeConfig>(DEFAULT_HOME_CONFIG);
   const [isPending, startTransition] = useTransition();
+  const [isCopied, setIsCopied] = useState(false);
 
   const searchInputRef = useRef<HTMLInputElement>(null);
   const searchBoxRef = useRef<HTMLDivElement>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
 
-  // Load history & home modules config
+  // Evaluate inline calculator expression locally (zero network requests)
+  const calculatorResult = useMemo(() => evaluateCalculatorExpression(query), [query]);
+
+  // Load home modules config
   useEffect(() => {
     if (typeof window !== 'undefined') {
-      try {
-        const stored = localStorage.getItem('sift-recent-searches');
-        if (stored) {
-          setRecentSearches(JSON.parse(stored));
-        }
-      } catch (e) {
-        console.error('Failed to load recent searches:', e);
-      }
       setHomeConfig(loadHomeConfig());
     }
 
@@ -77,30 +77,6 @@ export default function Home() {
 
     window.addEventListener('sift-home-config-updated', handleConfigUpdate);
     return () => window.removeEventListener('sift-home-config-updated', handleConfigUpdate);
-  }, []);
-
-  const saveRecentSearch = (searchQuery: string) => {
-    const trimmed = searchQuery.trim();
-    if (!trimmed) return;
-    const updated = [
-      trimmed,
-      ...recentSearches.filter((q) => q.toLowerCase() !== trimmed.toLowerCase()),
-    ].slice(0, 8);
-    setRecentSearches(updated);
-    localStorage.setItem('sift-recent-searches', JSON.stringify(updated));
-  };
-
-  const clearAllHistory = useCallback(() => {
-    setRecentSearches([]);
-    localStorage.removeItem('sift-recent-searches');
-  }, []);
-
-  const deleteRecentSearch = useCallback((qToDelete: string) => {
-    setRecentSearches((prev) => {
-      const updated = prev.filter((q) => q !== qToDelete);
-      localStorage.setItem('sift-recent-searches', JSON.stringify(updated));
-      return updated;
-    });
   }, []);
 
   // Global keyboard shortcut listener for '⌘K', 'Ctrl+K', '/', and 'Escape'
@@ -134,17 +110,17 @@ export default function Home() {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  // Fetch suggestions with debounce
+  // Fetch suggestions with debounce (bypassed if calculator query is detected)
   useEffect(() => {
     const fetchPredictions = async () => {
-      const isEnabled = typeof window !== 'undefined' && localStorage.getItem('sift-autocomplete') !== 'false';
-      if (!isEnabled || !query.trim()) {
-        setSuggestions([]);
-        return;
-      }
-
       if (abortControllerRef.current) {
         abortControllerRef.current.abort();
+      }
+
+      const isEnabled = typeof window !== 'undefined' && localStorage.getItem('sift-autocomplete') !== 'false';
+      if (!isEnabled || !query.trim() || isCalculatorQuery(query)) {
+        setSuggestions([]);
+        return;
       }
 
       const controller = new AbortController();
@@ -179,23 +155,30 @@ export default function Home() {
   const executeSearch = (searchQuery: string, catId?: string) => {
     const trimmed = searchQuery.trim();
     if (!trimmed) return;
-    saveRecentSearch(trimmed);
     const effectiveCategory = catId || selectedCategory;
+    recordSearch(trimmed, effectiveCategory);
     startTransition(() => {
       router.push(`/search?q=${encodeURIComponent(trimmed)}&category=${effectiveCategory}`);
     });
   };
 
   const handleInputKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'ArrowDown') {
-      e.preventDefault();
-      setShowSuggestions(true);
-      setActiveSuggestion((prev) => (prev < suggestions.length - 1 ? prev + 1 : 0));
-    } else if (e.key === 'ArrowUp') {
-      e.preventDefault();
-      setShowSuggestions(true);
-      setActiveSuggestion((prev) => (prev > 0 ? prev - 1 : suggestions.length - 1));
-    } else if (e.key === 'Enter') {
+    if (e.key === 'Enter') {
+      if (calculatorResult) {
+        // Shift+Enter explicitly executes ordinary web search
+        if (e.shiftKey) {
+          setShowSuggestions(false);
+          executeSearch(query);
+          return;
+        }
+        // Normal Enter copies calculation result and prevents web request
+        e.preventDefault();
+        setIsCopied(true);
+        if (typeof navigator !== 'undefined' && navigator.clipboard) {
+          navigator.clipboard.writeText(calculatorResult.formattedResult).catch(() => {});
+        }
+        return;
+      }
       if (activeSuggestion >= 0 && activeSuggestion < suggestions.length) {
         e.preventDefault();
         const selected = suggestions[activeSuggestion];
@@ -203,11 +186,44 @@ export default function Home() {
         setShowSuggestions(false);
         executeSearch(selected);
       }
+    } else if (e.key === 'ArrowDown') {
+      if (!calculatorResult) {
+        e.preventDefault();
+        setShowSuggestions(true);
+        setActiveSuggestion((prev) => (prev < suggestions.length - 1 ? prev + 1 : 0));
+      }
+    } else if (e.key === 'ArrowUp') {
+      if (!calculatorResult) {
+        e.preventDefault();
+        setShowSuggestions(true);
+        setActiveSuggestion((prev) => (prev > 0 ? prev - 1 : suggestions.length - 1));
+      }
     } else if (e.key === 'Escape') {
       setShowSuggestions(false);
       setActiveSuggestion(-1);
     }
   };
+
+  // Dismiss module handler: hides module while preserving all preferences
+  const dismissModule = useCallback((moduleId: 'clock' | 'weather' | 'recentSearches' | 'shortcuts') => {
+    setHomeConfig((prev) => {
+      const updated: SiftHomeConfig = {
+        ...prev,
+        modules: {
+          ...prev.modules,
+          [moduleId]: {
+            ...prev.modules[moduleId],
+            enabled: false,
+          },
+        },
+      };
+      saveHomeConfig(updated);
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('sift-home-config-updated', { detail: updated }));
+      }
+      return updated;
+    });
+  }, []);
 
   // Helper to render individual modules by ID
   const renderModule = (moduleId: string) => {
@@ -220,6 +236,7 @@ export default function Home() {
             showSeconds={homeConfig.modules.clock.showSeconds}
             timezone={homeConfig.modules.clock.timezone}
             hourFormat={homeConfig.modules.clock.hourFormat}
+            onDismiss={() => dismissModule('clock')}
           />
         );
       case 'weather':
@@ -228,19 +245,18 @@ export default function Home() {
             key="weather"
             unit={homeConfig.modules.weather.unit}
             city={homeConfig.modules.weather.city}
+            onDismiss={() => dismissModule('weather')}
           />
         );
       case 'recentSearches':
         return (
           <HomeRecentSearches
             key="recentSearches"
-            searches={recentSearches}
-            onSelectSearch={(item) => {
+            onSelectSearch={(item, cat) => {
               setQuery(item);
-              executeSearch(item);
+              executeSearch(item, cat);
             }}
-            onDeleteSearch={deleteRecentSearch}
-            onClearAll={clearAllHistory}
+            onDismiss={() => dismissModule('recentSearches')}
             maxItems={homeConfig.modules.recentSearches.maxItems}
           />
         );
@@ -277,27 +293,33 @@ export default function Home() {
   if (homeConfig.modules.shortcuts.enabled) mobileBottomMods.push('shortcuts');
   if (homeConfig.modules.recentSearches.enabled) mobileBottomMods.push('recentSearches');
 
-  // Check if any bottom modules exist (for fallback row display)
-  const hasBottomModules = bottomLeftMods.length > 0 || bottomRightMods.length > 0;
-
   return (
     <div className={styles.pageContainer}>
       {/* Top Bar with Brand & Settings Toggle */}
       <header className={styles.topBar}>
         <div className={styles.topBrand}>
           <span className={styles.brandTitle}>SIFT</span>
-          <span className={styles.brandSubtitle}>SEARCH WORKSTATION</span>
         </div>
         
-        <button 
-          type="button" 
-          className={styles.settingsIconBtn} 
-          onClick={() => setIsSettingsOpen(true)}
-          title="Preferences & Settings"
-          aria-label="Open settings"
-        >
-          <SettingsIcon size={17} />
-        </button>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+          <Link
+            href="/history"
+            className={styles.settingsIconBtn}
+            title="Search History"
+            aria-label="Open search history"
+          >
+            <ClockIcon size={17} />
+          </Link>
+          <button 
+            type="button" 
+            className={styles.settingsIconBtn} 
+            onClick={() => setIsSettingsOpen(true)}
+            title="Preferences & Settings"
+            aria-label="Open settings"
+          >
+            <SettingsIcon size={17} />
+          </button>
+        </div>
       </header>
 
       {/* Spatial Canvas Container (Desktop Corner Anchors + Responsive Flow) */}
@@ -331,6 +353,7 @@ export default function Home() {
                     timezone={homeConfig.modules.clock.timezone}
                     hourFormat={homeConfig.modules.clock.hourFormat}
                     compact
+                    onDismiss={() => dismissModule('clock')}
                   />
                 )}
                 {isClockEnabled && isWeatherEnabled && (
@@ -341,6 +364,7 @@ export default function Home() {
                     unit={homeConfig.modules.weather.unit}
                     city={homeConfig.modules.weather.city}
                     compact
+                    onDismiss={() => dismissModule('weather')}
                   />
                 )}
               </div>
@@ -363,10 +387,17 @@ export default function Home() {
               className={styles.searchForm}
               onSubmit={(e) => {
                 e.preventDefault();
+                if (calculatorResult) {
+                  setIsCopied(true);
+                  if (typeof navigator !== 'undefined' && navigator.clipboard) {
+                    navigator.clipboard.writeText(calculatorResult.formattedResult).catch(() => {});
+                  }
+                  return;
+                }
                 executeSearch(query);
               }}
             >
-              <div className={styles.inputGroup}>
+              <div className={`${styles.inputGroup} ${calculatorResult ? styles.inputGroupActiveCalc : ''}`}>
                 <SearchIcon size={18} className={styles.searchIcon} />
                 
                 <input
@@ -411,13 +442,27 @@ export default function Home() {
                   className={styles.searchSubmitAction}
                   disabled={isPending}
                   aria-label="Execute search"
+                  onClick={() => {
+                    if (calculatorResult) {
+                      executeSearch(query);
+                    }
+                  }}
                 >
                   <SearchIcon size={16} />
                 </button>
               </div>
             </form>
 
-            {showSuggestions && suggestions.length > 0 && (
+            {calculatorResult && (
+              <CalculatorPreview
+                calculation={calculatorResult}
+                onWebSearch={(q) => executeSearch(q)}
+                isCopied={isCopied}
+                onCopySuccess={() => setIsCopied(true)}
+              />
+            )}
+
+            {!calculatorResult && showSuggestions && suggestions.length > 0 && (
               <ul className={styles.suggestionsDropdown} role="listbox">
                 {suggestions.map((item, idx) => (
                   <li
@@ -462,25 +507,6 @@ export default function Home() {
             })}
           </nav>
 
-          {/* Central status pill if no bottom modules occupy space (Desktop only) */}
-          {!hasBottomModules && (
-            <div className={styles.statusPillsRow}>
-              <div className={styles.statusPill}>
-                <span className={styles.statusDot} />
-                <span>LOCAL INSTANCE</span>
-              </div>
-              <div className={styles.statusDivider}>•</div>
-              <div className={styles.statusPill}>
-                <LayersIcon size={11} />
-                <span>MULTI-ENGINE AGGREGATE</span>
-              </div>
-              <div className={styles.statusDivider}>•</div>
-              <div className={styles.statusPill}>
-                <span>ZERO TELEMETRY</span>
-              </div>
-            </div>
-          )}
-
           {/* Mobile Bottom Widgets (Shortcuts & Recent Searches) */}
           {mobileBottomMods.length > 0 && (
             <div className={styles.mobileBottomWidgets}>
@@ -509,8 +535,6 @@ export default function Home() {
       <footer className={styles.footer}>
         <div className={styles.footerBrand}>
           <span>SIFT</span>
-          <span className={styles.footerDot}>•</span>
-          <span className={styles.footerTag}>PRIVATE WORKSTATION</span>
         </div>
         <div className={styles.footerLinks}>
           <span className={styles.footerShortcutHint}>Press <kbd>/</kbd> or <kbd>⌘K</kbd> to search</span>

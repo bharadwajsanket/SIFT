@@ -55,7 +55,7 @@ export function SiftMark({ size = 28, className = '', variant = 'lavender' }: Si
           <stop offset="100%" stopColor="#818cf8" />
         </linearGradient>
         <linearGradient id={dotGradientId} x1="37" y1="20" x2="45" y2="28" gradientUnits="userSpaceOnUse">
-          <stop offset="0%" stopColor="#38bdf8" />
+          <stop offset="0%" stopColor="#c4b5fd" />
           <stop offset="100%" stopColor="#a78bfa" />
         </linearGradient>
       </defs>

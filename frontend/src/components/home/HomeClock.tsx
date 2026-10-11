@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import { CloseIcon } from '@/components/icons';
 import styles from '@/app/page.module.css';
 
 interface HomeClockProps {
@@ -9,6 +10,7 @@ interface HomeClockProps {
   timezone?: string;
   hourFormat?: '12h' | '24h';
   compact?: boolean;
+  onDismiss?: () => void;
 }
 
 export function HomeClock({ 
@@ -16,7 +18,8 @@ export function HomeClock({
   showSeconds = false, 
   timezone = 'local',
   hourFormat = '24h',
-  compact = false
+  compact = false,
+  onDismiss
 }: HomeClockProps) {
   const [timeStr, setTimeStr] = useState<string>('');
   const [dateStr, setDateStr] = useState<string>('');
@@ -93,12 +96,40 @@ export function HomeClock({
         {amPmStr && <span className={styles.compactAmPmText}>{amPmStr}</span>}
         {showDate && <span className={styles.compactDateText}>{dateStr}</span>}
         {tzLabel && <span className={styles.compactTzText}>{tzLabel}</span>}
+        {onDismiss && (
+          <button
+            type="button"
+            className={styles.compactDismissBtn}
+            onClick={(e) => {
+              e.stopPropagation();
+              onDismiss();
+            }}
+            aria-label="Dismiss clock module"
+            title="Dismiss clock"
+          >
+            <CloseIcon size={10} />
+          </button>
+        )}
       </div>
     );
   }
 
   return (
     <div className={`${styles.spatialModule} ${styles.atmosphericCard}`}>
+      {onDismiss && (
+        <button
+          type="button"
+          className={styles.moduleDismissBtn}
+          onClick={(e) => {
+            e.stopPropagation();
+            onDismiss();
+          }}
+          aria-label="Dismiss clock module"
+          title="Dismiss clock"
+        >
+          <CloseIcon size={12} />
+        </button>
+      )}
       <div className={styles.clockDisplay}>
         <div className={styles.clockTimeRow}>
           <span className={styles.clockPrimaryTime}>{timeStr}</span>

@@ -36,7 +36,7 @@
 
 .headerTop {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: 1.25rem;
   padding: 0.7rem 2rem 0.55rem 2rem;
   max-width: 1440px;
@@ -52,6 +52,7 @@
   align-items: center;
   flex-shrink: 0;
   transition: transform var(--transition-fast);
+  margin-top: 0.35rem;
 }
 
 .brand:hover {
@@ -139,6 +140,18 @@
   box-shadow: 0 0 0 2px var(--accent-surface), 0 0 16px -2px var(--accent-glow);
 }
 
+.inputGroupActiveCalc {
+  border-bottom-left-radius: 0 !important;
+  border-bottom-right-radius: 0 !important;
+  border-top-left-radius: var(--radius-md) !important;
+  border-top-right-radius: var(--radius-md) !important;
+  border-bottom-color: var(--glass-border-subtle) !important;
+}
+
+:global(html[data-visual-style="matte"]) .inputGroupActiveCalc {
+  border-bottom-color: var(--border) !important;
+}
+
 .searchIcon {
   color: var(--accent);
   margin-right: 0.65rem;
@@ -190,6 +203,7 @@
   gap: 0.5rem;
   align-items: center;
   flex-shrink: 0;
+  margin-top: 0.2rem;
 }
 
 .iconBtn {
@@ -2154,6 +2168,49 @@
   background-color: var(--accent-surface);
   color: var(--accent);
   border: 1px solid var(--accent-border);
+}
+
+.aiHeaderActions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.aiOverviewCopyBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.2rem 0.55rem;
+  font-size: 0.72rem;
+  font-family: var(--font-mono);
+  font-weight: 500;
+  color: var(--text-muted);
+  background-color: var(--glass-surface-subtle);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-xs);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.aiOverviewCopyBtn:hover {
+  color: var(--text);
+  border-color: var(--glass-border-focus);
+  background-color: var(--glass-surface-hover);
+}
+
+.aiOverviewCopyBtn:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+:global(html[data-visual-style="matte"]) .aiOverviewCopyBtn {
+  background-color: var(--surface-subtle);
+  border-color: var(--border);
+}
+
+:global(html[data-visual-style="matte"]) .aiOverviewCopyBtn:hover {
+  background-color: var(--surface-hover);
+  border-color: var(--border-strong);
 }
 
 /* Loading Shimmer */

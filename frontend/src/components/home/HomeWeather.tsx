@@ -1,16 +1,17 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { SunIcon, MoonIcon, SparklesIcon } from '@/components/icons';
+import { SunIcon, MoonIcon, SparklesIcon, CloseIcon } from '@/components/icons';
 import styles from '@/app/page.module.css';
 
 interface HomeWeatherProps {
   unit?: 'c' | 'f';
   city?: string;
   compact?: boolean;
+  onDismiss?: () => void;
 }
 
-export function HomeWeather({ unit = 'c', city = '', compact = false }: HomeWeatherProps) {
+export function HomeWeather({ unit = 'c', city = '', compact = false, onDismiss }: HomeWeatherProps) {
   const [temp, setTemp] = useState<number>(20);
   const [condition, setCondition] = useState<string>('Atmospheric Horizon');
   const [locationLabel, setLocationLabel] = useState<string>('');
@@ -115,12 +116,40 @@ export function HomeWeather({ unit = 'c', city = '', compact = false }: HomeWeat
         </div>
         <span className={styles.compactTempText}>{displayTemp}{unitSymbol}</span>
         {shortCity && <span className={styles.compactCityText}>{shortCity}</span>}
+        {onDismiss && (
+          <button
+            type="button"
+            className={styles.compactDismissBtn}
+            onClick={(e) => {
+              e.stopPropagation();
+              onDismiss();
+            }}
+            aria-label="Dismiss weather module"
+            title="Dismiss weather"
+          >
+            <CloseIcon size={10} />
+          </button>
+        )}
       </div>
     );
   }
 
   return (
     <div className={`${styles.spatialModule} ${styles.atmosphericCard}`}>
+      {onDismiss && (
+        <button
+          type="button"
+          className={styles.moduleDismissBtn}
+          onClick={(e) => {
+            e.stopPropagation();
+            onDismiss();
+          }}
+          aria-label="Dismiss weather module"
+          title="Dismiss weather"
+        >
+          <CloseIcon size={12} />
+        </button>
+      )}
       <div className={styles.weatherDisplay}>
         <div className={styles.weatherHeaderRow}>
           <div className={styles.weatherIconBadge}>
